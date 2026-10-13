@@ -26,7 +26,7 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
   doesn't top the list), "Most downloaded" and "Most viewed". Views and downloads count once per
   browser per route per day and skip obvious bots. Voting needs an account; authors can't rate
   their own routes.
-- Accounts via Discord or GitHub (Auth.js). Authors can edit or delete their routes; `ADMIN_USER_IDS`
+- Accounts via Discord (Auth.js). Authors can edit or delete their routes; `ADMIN_USER_IDS`
   can moderate any.
 
 ## Share codes
@@ -91,10 +91,10 @@ After changing `src/db/schema.ts`, run `npm run db:generate` and commit the new 
 One-time setup:
 
 ```bash
-npx wrangler d1 create beamjoy-web                 # put the printed database_id in wrangler.jsonc
-npx wrangler r2 bucket create beamjoy-web-screenshots
+npx wrangler d1 create beamjoy-web-db              # put the printed database_id in wrangler.jsonc
+npx wrangler r2 bucket create beamjoy-web-storage
 npm run db:migrate:remote
-npx wrangler secret put AUTH_SECRET                # plus AUTH_DISCORD_ID/SECRET etc.
+npx wrangler secret put AUTH_SECRET                # plus AUTH_DISCORD_ID / AUTH_DISCORD_SECRET
 ```
 
 Then `npm run deploy` (or connect the repo to Workers Builds with `npx opennextjs-cloudflare build`
@@ -111,5 +111,8 @@ Notes:
 - Cache Components (partial prerendering) is off. It hangs in the Workers runtime, and every page
   here reads D1 or the session per request anyway. Prerendered output is served from static
   assets (`open-next.config.ts`), so no cache bucket is needed.
+- Every Cloudflare resource shares the `beamjoy-web-` prefix: Worker `beamjoy-web`, D1
+  `beamjoy-web-db`, R2 `beamjoy-web-storage`. The bucket is general-purpose; screenshots live
+  under `screenshots/`, and only that prefix is served publicly.
 - Screenshots go through the Worker at `/uploads/...` with immutable cache headers. To serve them
-  straight from R2 instead, give the bucket a public domain and set `SCREENSHOTS_PUBLIC_URL`.
+  straight from R2 instead, give the bucket a public domain and set `STORAGE_PUBLIC_URL`.

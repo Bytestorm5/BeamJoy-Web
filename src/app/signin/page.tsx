@@ -7,7 +7,6 @@ export const metadata: Metadata = { title: "Sign in" };
 
 const PROVIDER_STYLE: Record<string, string> = {
   discord: "bg-[#5865F2] text-white hover:bg-[#4752c4]",
-  github: "bg-[#24292f] text-white hover:bg-[#32383f] dark:border dark:border-border-strong",
 };
 
 export default function SignInPage({ searchParams }: PageProps<"/signin">) {
@@ -57,8 +56,7 @@ async function Providers({ searchParams }: { searchParams: PageProps<"/signin">[
       )}
       {!oauth.length && !devLoginEnabled && (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-muted">
-          No sign-in providers are configured. Set AUTH_DISCORD_ID and AUTH_DISCORD_SECRET (or the
-          GitHub equivalents) on the server.
+          Sign-in isn&apos;t configured. Set AUTH_DISCORD_ID and AUTH_DISCORD_SECRET on the server.
         </p>
       )}
     </div>

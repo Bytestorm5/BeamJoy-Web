@@ -21,17 +21,18 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "beamjoy-web",
-      // `npx wrangler d1 create beamjoy-web` prints the real id. Local dev works without it.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "beamjoy-web-db",
+      // Every Cloudflare resource for this site shares the `beamjoy-web-` prefix.
+      "database_id": "29ce5a34-2b43-4ab8-ba0a-910768c4c44f",
       "migrations_dir": "drizzle"
     }
   ],
   "r2_buckets": [
     {
-      // Route screenshots. Create with `npx wrangler r2 bucket create beamjoy-web-screenshots`.
-      "binding": "SCREENSHOTS",
-      "bucket_name": "beamjoy-web-screenshots"
+      // General-purpose file storage for the site. Each use gets its own key prefix
+      // (route screenshots live under `screenshots/`).
+      "binding": "STORAGE",
+      "bucket_name": "beamjoy-web-storage"
     }
   ],
   "observability": {

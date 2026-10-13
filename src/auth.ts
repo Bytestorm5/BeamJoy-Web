@@ -2,7 +2,6 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
-import GitHub from "next-auth/providers/github";
 import { getDb, schema } from "@/db";
 
 declare module "next-auth" {
@@ -15,10 +14,9 @@ export const devLoginEnabled =
   process.env.AUTH_DEV_LOGIN === "true" && process.env.NODE_ENV !== "production";
 
 const providers: Provider[] = [];
-// BeamMP's community lives on Discord, so it's the primary sign-in. Each provider only turns on
-// once its credentials are configured (AUTH_DISCORD_ID/SECRET, AUTH_GITHUB_ID/SECRET).
+// BeamMP's community lives on Discord, so it's the only real sign-in. It turns on once
+// AUTH_DISCORD_ID and AUTH_DISCORD_SECRET are set.
 if (process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET) providers.push(Discord);
-if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) providers.push(GitHub);
 if (devLoginEnabled) {
   providers.push(
     Credentials({

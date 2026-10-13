@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 
 /** Numbered pager with a window around the current page, so it stays short at any page count. */
 export function Pagination({

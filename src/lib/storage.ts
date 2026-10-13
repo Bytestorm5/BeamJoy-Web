@@ -3,11 +3,11 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { nanoid } from "nanoid";
 
 /**
- * Screenshots live in the SCREENSHOTS R2 bucket and are served by app/uploads/[...key]/route.ts.
- * Set SCREENSHOTS_PUBLIC_URL (an r2.dev or custom domain on that bucket) to link to R2 directly
- * instead of going through the Worker.
+ * Route screenshots live under `screenshots/` in the site's general STORAGE R2 bucket and are
+ * served by app/uploads/[...key]/route.ts. Set STORAGE_PUBLIC_URL (an r2.dev or custom domain on
+ * that bucket) to link to R2 directly instead of going through the Worker.
  */
-const bucket = () => getCloudflareContext().env.SCREENSHOTS;
+const bucket = () => getCloudflareContext().env.STORAGE;
 
 export const IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -27,7 +27,7 @@ export function sniffImageType(buf: Uint8Array): string | null {
 }
 
 function publicUrl(key: string) {
-  const base = process.env.SCREENSHOTS_PUBLIC_URL?.replace(/\/+$/, "");
+  const base = process.env.STORAGE_PUBLIC_URL?.replace(/\/+$/, "");
   return base ? `${base}/${key}` : `/uploads/${key}`;
 }
 
@@ -36,7 +36,7 @@ export async function storeImage(
   bytes: Uint8Array,
   type: string,
 ): Promise<{ url: string; storageKey: string }> {
-  const key = `routes/${routeId}/${nanoid(12)}.${IMAGE_TYPES[type]}`;
+  const key = `screenshots/${routeId}/${nanoid(12)}.${IMAGE_TYPES[type]}`;
   await bucket().put(key, bytes, {
     httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" },
   });
@@ -48,6 +48,7 @@ export async function deleteImages(storageKeys: string[]) {
 }
 
 export async function readUpload(key: string) {
-  if (!/^routes\/[\w-]+\/[\w-]+\.(jpg|png|webp|avif)$/.test(key)) return null;
+  // Only screenshot keys are publicly readable; anything else in the bucket stays private.
+  if (!/^screenshots\/[\w-]+\/[\w-]+\.(jpg|png|webp|avif)$/.test(key)) return null;
   return bucket().get(key);
 }

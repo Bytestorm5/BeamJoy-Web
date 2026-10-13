@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useState, useTransition } from "react";
 import { voteRoute } from "@/app/actions";
 

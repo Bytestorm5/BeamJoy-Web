@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { Suspense } from "react";
 import { Pagination } from "@/components/pagination";
 import { VANILLA_MAPS } from "@/lib/constants";

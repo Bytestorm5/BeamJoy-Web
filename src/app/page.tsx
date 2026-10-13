@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { Suspense } from "react";
 import { FilterDrawer } from "@/components/filter-drawer";
 import { FilterPanel, SortSelect } from "@/components/filter-panel";

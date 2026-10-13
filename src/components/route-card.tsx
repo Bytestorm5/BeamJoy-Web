@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import type { RouteGeometry } from "@/lib/sharecode/analyze";
 import type { RouteCard as RouteCardData } from "@/lib/queries";
 import { SURFACE_LABEL } from "@/lib/constants";

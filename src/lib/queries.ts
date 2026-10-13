@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, count, desc, eq, exists, gte, inArray, like, lte, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { PAGE_SIZE } from "./constants";
@@ -127,7 +128,8 @@ export async function popularTags(limit = 16) {
     .limit(limit);
 }
 
-export async function getRoute(id: string) {
+/** Deduped per request: generateMetadata and the page body both need it. */
+export const getRoute = cache(async (id: string) => {
   const [row] = await getDb()
     .select({ route: routes, author: { id: users.id, name: users.name, image: users.image } })
     .from(routes)
@@ -140,7 +142,7 @@ export async function getRoute(id: string) {
     getDb().select({ tag: routeTags.tag }).from(routeTags).where(eq(routeTags.routeId, id)).orderBy(asc(routeTags.tag)),
   ]);
   return { ...row.route, author: row.author, images, tags: tags.map((t) => t.tag) };
-}
+});
 
 export type RouteDetail = NonNullable<Awaited<ReturnType<typeof getRoute>>>;
 
