@@ -7,14 +7,16 @@ export function formatDate(d: Date) {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export function slugify(s: string) {
+/** URL-safe lowercase slug (ASCII letters, digits, hyphens). May be empty for non-Latin text. */
+export function slugify(s: string, max = 60) {
   return s
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[^a-z0-9\s_-]/g, "")
     .trim()
     .replace(/[\s_-]+/g, "-")
-    .slice(0, 60);
+    .slice(0, max)
+    .replace(/^-+|-+$/g, "");
 }
 
 export function pluralize(n: number, one: string, many = `${one}s`) {

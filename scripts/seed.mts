@@ -18,7 +18,8 @@ import { nanoid } from "nanoid";
 import * as schema from "../src/db/schema.ts";
 import { analyzeRace } from "../src/lib/sharecode/analyze.ts";
 import { decodeShareCode, encodeRaceShareCode } from "../src/lib/sharecode/codec.ts";
-import { VANILLA_MAP_BY_LEVEL } from "../src/lib/constants.ts";
+import { slugify } from "../src/lib/format.ts";
+import { vanillaMapByLevel } from "../src/lib/maps.ts";
 import { utcDay, wilsonScore } from "../src/lib/metrics.ts";
 
 const repo = process.argv[2];
@@ -56,11 +57,15 @@ const guessTags = (name: string, loop: boolean) => {
 };
 
 let inserted = 0;
+const slugs = new Set(
+  (await db.select({ slug: schema.routes.slug }).from(schema.routes)).map((r) => r.slug),
+);
 let t = Date.now() - 1000 * 60 * 60 * 24 * 60;
 for (const file of readdirSync(dir).filter((f) => f.endsWith("_races.json")).sort()) {
   const level = file.replace(/_races\.json$/, "");
-  const mapName = VANILLA_MAP_BY_LEVEL[level];
-  if (!mapName) continue;
+  const map = vanillaMapByLevel(level);
+  if (!map) continue;
+  const mapName = map.name;
   for (const race of JSON.parse(readFileSync(path.join(dir, file), "utf8"))) {
     const code = await encodeRaceShareCode({
       name: race.name,
@@ -78,15 +83,19 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith("_races.json")).sor
     const { stats: s, geometry } = analyzeRace(decoded.payload);
     const id = nanoid(10);
     t += 1000 * 60 * 37;
+    let slug = slugify(race.name) || "route";
+    for (let n = 2; slugs.has(slug); n++) slug = `${slugify(race.name) || "route"}-${n}`;
+    slugs.add(slug);
     await db.insert(schema.routes).values({
       id,
+      slug,
       title: race.name,
       description: `One of the races bundled with BeamJoy-Revived for ${mapName}.`,
       authorId: author.id,
       activityType: "race",
       shareCode: code,
       mapKind: "vanilla",
-      mapKey: level,
+      mapKey: map.slug,
       mapName,
       surface: guessSurface(race.name),
       distanceM: s.distanceM,

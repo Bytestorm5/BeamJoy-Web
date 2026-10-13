@@ -1,24 +1,23 @@
-/** Base-game levels, mirroring BeamJoyServer/services/maps.lua's own `base = true` list. */
+/**
+ * Base-game levels, mirroring BeamJoyServer/services/maps.lua's own `base = true` list. `slug` is
+ * the public URL key (/maps/<slug>); `level` is the game's folder name.
+ */
 export const VANILLA_MAPS = [
-  { level: "west_coast_usa", name: "West Coast, USA" },
-  { level: "east_coast_usa", name: "East Coast, USA" },
-  { level: "italy", name: "Italy" },
-  { level: "utah", name: "Utah, USA" },
-  { level: "jungle_rock_island", name: "Jungle Rock Island" },
-  { level: "johnson_valley", name: "Johnson Valley" },
-  { level: "industrial", name: "Industrial Site" },
-  { level: "hirochi_raceway", name: "Hirochi Raceway" },
-  { level: "automation_test_track", name: "Automation Test Track" },
-  { level: "small_island", name: "Small Island, USA" },
-  { level: "derby", name: "Derby Arenas" },
-  { level: "driver_training", name: "Driver Training" },
-  { level: "gridmap_v2", name: "Grid Map V2" },
-  { level: "smallgrid", name: "Small Grid" },
+  { slug: "west-coast-usa", level: "west_coast_usa", name: "West Coast, USA" },
+  { slug: "east-coast-usa", level: "east_coast_usa", name: "East Coast, USA" },
+  { slug: "italy", level: "italy", name: "Italy" },
+  { slug: "utah", level: "utah", name: "Utah, USA" },
+  { slug: "jungle-rock-island", level: "jungle_rock_island", name: "Jungle Rock Island" },
+  { slug: "johnson-valley", level: "johnson_valley", name: "Johnson Valley" },
+  { slug: "industrial", level: "industrial", name: "Industrial Site" },
+  { slug: "hirochi-raceway", level: "hirochi_raceway", name: "Hirochi Raceway" },
+  { slug: "automation-test-track", level: "automation_test_track", name: "Automation Test Track" },
+  { slug: "small-island", level: "small_island", name: "Small Island, USA" },
+  { slug: "derby", level: "derby", name: "Derby Arenas" },
+  { slug: "driver-training", level: "driver_training", name: "Driver Training" },
+  { slug: "gridmap-v2", level: "gridmap_v2", name: "Grid Map V2" },
+  { slug: "smallgrid", level: "smallgrid", name: "Small Grid" },
 ] as const;
-
-export const VANILLA_MAP_BY_LEVEL: Record<string, string> = Object.fromEntries(
-  VANILLA_MAPS.map((m) => [m.level, m.name]),
-);
 
 export const SURFACES = [
   { value: "asphalt", label: "Asphalt" },

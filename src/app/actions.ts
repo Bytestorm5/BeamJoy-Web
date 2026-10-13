@@ -11,6 +11,8 @@ import { parseRouteForm, type FieldErrors } from "@/lib/route-input";
 import { analyzeRace } from "@/lib/sharecode/analyze";
 import { decodeShareCode, ShareCodeError } from "@/lib/sharecode/codec";
 import { isBot, utcDay, wilsonScore } from "@/lib/metrics";
+import { routePath } from "@/lib/maps";
+import { freeRouteSlug } from "@/lib/queries";
 import { deleteImages, sniffImageType, storeImage } from "@/lib/storage";
 
 const { routes, routeImages, routeTags, routeDailyStats, routeVotes } = schema;
@@ -22,7 +24,7 @@ async function analyzeCode(code: string) {
     const decoded = await decodeShareCode(code);
     return { ok: true as const, decoded, analysis: analyzeRace(decoded.payload) };
   } catch (e) {
-    const message = e instanceof ShareCodeError ? e.message : "Couldn't read that share code.";
+    const message = e instanceof ShareCodeError ? e.message : "Invalid share code.";
     return { ok: false as const, message };
   }
 }
@@ -30,14 +32,14 @@ async function analyzeCode(code: string) {
 async function readImages(fd: FormData, room: number) {
   const files = fd.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
   if (files.length > room) {
-    return { error: `You can attach up to ${LIMITS.images} screenshots per route.` };
+    return { error: `Up to ${LIMITS.images} screenshots.` };
   }
   const out: { bytes: Uint8Array; type: string }[] = [];
   for (const f of files) {
-    if (f.size > LIMITS.imageBytes) return { error: `"${f.name}" is larger than 5 MB.` };
+    if (f.size > LIMITS.imageBytes) return { error: `"${f.name}" is over 5 MB.` };
     const bytes = new Uint8Array(await f.arrayBuffer());
     const type = sniffImageType(bytes);
-    if (!type) return { error: `"${f.name}" isn't a JPEG, PNG, WebP or AVIF image.` };
+    if (!type) return { error: `"${f.name}" isn’t a supported image.` };
     out.push({ bytes, type });
   }
   return { images: out };
@@ -67,7 +69,7 @@ function statColumns(analysis: ReturnType<typeof analyzeRace>, cornersOverride: 
 
 export async function createRoute(_prev: FormState, fd: FormData): Promise<FormState> {
   const user = await currentUser();
-  if (!user) return { message: "Sign in to share a route." };
+  if (!user) return { message: "Sign in to share." };
 
   const code = await analyzeCode(String(fd.get("shareCode") ?? ""));
   if (!code.ok) return { errors: { shareCode: code.message } };
@@ -81,12 +83,16 @@ export async function createRoute(_prev: FormState, fd: FormData): Promise<FormS
   const id = nanoid(10);
   const d = input.data;
   // Upload first so the rows can reference the stored files in one atomic batch.
-  const stored = await Promise.all(imgs.images.map((img) => storeImage(id, img.bytes, img.type)));
+  const [slug, stored] = await Promise.all([
+    freeRouteSlug(d.title),
+    Promise.all(imgs.images.map((img) => storeImage(img.bytes, img.type))),
+  ]);
   const db = getDb();
   try {
     await db.batch([
       db.insert(routes).values({
         id,
+        slug,
         title: d.title,
         description: d.description,
         authorId: user.id,
@@ -111,20 +117,21 @@ export async function createRoute(_prev: FormState, fd: FormData): Promise<FormS
     throw e;
   }
 
-  redirect(`/routes/${id}`);
+  redirect(routePath(slug));
 }
 
-async function loadOwned(routeId: string) {
+async function loadOwned(slug: string) {
   const user = await currentUser();
   if (!user) return null;
-  const [route] = await getDb().select().from(routes).where(eq(routes.id, routeId)).limit(1);
+  const [route] = await getDb().select().from(routes).where(eq(routes.slug, slug)).limit(1);
   if (!route || (route.authorId !== user.id && !isAdmin(user.id))) return null;
   return route;
 }
 
-export async function updateRoute(routeId: string, _prev: FormState, fd: FormData): Promise<FormState> {
-  const route = await loadOwned(routeId);
-  if (!route) return { message: "You can only edit routes you shared." };
+export async function updateRoute(slug: string, _prev: FormState, fd: FormData): Promise<FormState> {
+  const route = await loadOwned(slug);
+  if (!route) return { message: "You can only edit your own routes." };
+  const routeId = route.id;
 
   const input = parseRouteForm(fd);
   if (!input.ok) return { errors: input.errors };
@@ -154,7 +161,7 @@ export async function updateRoute(routeId: string, _prev: FormState, fd: FormDat
   if ("error" in imgs) return { errors: { images: imgs.error } };
 
   const maxPos = existing.reduce((m, i) => Math.max(m, i.position), -1);
-  const stored = await Promise.all(imgs.images.map((img) => storeImage(routeId, img.bytes, img.type)));
+  const stored = await Promise.all(imgs.images.map((img) => storeImage(img.bytes, img.type)));
   const added = stored.map((s, i) => ({
     id: nanoid(12),
     routeId,
@@ -194,16 +201,16 @@ export async function updateRoute(routeId: string, _prev: FormState, fd: FormDat
   }
   await deleteImages(removing.map((r) => r.storageKey));
 
-  redirect(`/routes/${routeId}`);
+  redirect(routePath(route.slug));
 }
 
-export async function deleteRoute(routeId: string) {
-  const route = await loadOwned(routeId);
+export async function deleteRoute(slug: string) {
+  const route = await loadOwned(slug);
   if (!route) return;
   const db = getDb();
-  const images = await db.select().from(routeImages).where(eq(routeImages.routeId, routeId));
+  const images = await db.select().from(routeImages).where(eq(routeImages.routeId, route.id));
   // Tags, images, votes and daily stats cascade.
-  await db.delete(routes).where(eq(routes.id, routeId));
+  await db.delete(routes).where(eq(routes.id, route.id));
   await deleteImages(images.map((i) => i.storageKey));
   redirect("/");
 }
@@ -212,8 +219,8 @@ export async function deleteRoute(routeId: string) {
  * Counts a page view or a share-code copy ("download") for today's bucket. Deduplicated per
  * browser per route per UTC day with a small cookie, and skipped for obvious bots.
  */
-export async function trackRouteEvent(routeId: string, kind: "view" | "copy") {
-  if (typeof routeId !== "string" || !/^[\w-]{1,32}$/.test(routeId)) return;
+export async function trackRouteEvent(slug: string, kind: "view" | "copy") {
+  if (typeof slug !== "string" || !/^[a-z0-9-]{1,80}$/.test(slug)) return;
   if (kind !== "view" && kind !== "copy") return;
   if (isBot((await headers()).get("user-agent"))) return;
 
@@ -221,11 +228,13 @@ export async function trackRouteEvent(routeId: string, kind: "view" | "copy") {
   const jar = await cookies();
   const [cookieDay, ...seen] = (jar.get("bj_seen")?.value ?? "").split(".");
   const seenToday = cookieDay === day ? seen : [];
-  const token = `${kind[0]}${routeId}`;
+  // A short hash keeps the cookie small however long slugs get.
+  const token = `${kind[0]}${shortHash(slug)}`;
   if (seenToday.includes(token)) return;
 
   const db = getDb();
   const isView = kind === "view";
+  const routeId = sql<string>`(select ${routes.id} from ${routes} where ${routes.slug} = ${slug})`;
   try {
     await db.batch([
       db
@@ -240,10 +249,10 @@ export async function trackRouteEvent(routeId: string, kind: "view" | "copy") {
       db
         .update(routes)
         .set(isView ? { viewCount: sql`${routes.viewCount} + 1` } : { copyCount: sql`${routes.copyCount} + 1` })
-        .where(eq(routes.id, routeId)),
+        .where(eq(routes.slug, slug)),
     ]);
   } catch {
-    return; // Unknown route (foreign key): nothing to count.
+    return; // Unknown slug (null route_id): nothing to count.
   }
   jar.set("bj_seen", [day, ...seenToday, token].slice(0, 120).join("."), {
     maxAge: 60 * 60 * 26,
@@ -253,22 +262,30 @@ export async function trackRouteEvent(routeId: string, kind: "view" | "copy") {
   });
 }
 
+/** FNV-1a, 32-bit, hex. Only for de-duplication tokens, not security. */
+function shortHash(s: string) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16);
+}
+
 export type VoteResult = { likes: number; dislikes: number; myVote: -1 | 0 | 1; error?: string };
 
 /** Like (1), dislike (-1) or clear (0) the signed-in user's vote on a route. */
-export async function voteRoute(routeId: string, value: -1 | 0 | 1): Promise<VoteResult> {
+export async function voteRoute(slug: string, value: -1 | 0 | 1): Promise<VoteResult> {
   const user = await currentUser();
   const db = getDb();
   const [route] = await db
-    .select({ authorId: routes.authorId, likes: routes.likeCount, dislikes: routes.dislikeCount })
+    .select({ id: routes.id, authorId: routes.authorId, likes: routes.likeCount, dislikes: routes.dislikeCount })
     .from(routes)
-    .where(eq(routes.id, routeId))
+    .where(eq(routes.slug, slug))
     .limit(1);
-  if (!route) return { likes: 0, dislikes: 0, myVote: 0, error: "This route no longer exists." };
-  if (!user) return { likes: route.likes, dislikes: route.dislikes, myVote: 0, error: "Sign in to rate routes." };
+  if (!route) return { likes: 0, dislikes: 0, myVote: 0, error: "Route not found." };
+  if (!user) return { likes: route.likes, dislikes: route.dislikes, myVote: 0, error: "Sign in to rate." };
   if (user.id === route.authorId) {
     return { likes: route.likes, dislikes: route.dislikes, myVote: 0, error: "You can't rate your own route." };
   }
+  const routeId = route.id;
   if (value !== 1 && value !== -1 && value !== 0) value = 0;
 
   const tally = (v: number) =>

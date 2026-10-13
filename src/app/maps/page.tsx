@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Pagination } from "@/components/pagination";
 import { VANILLA_MAPS } from "@/lib/constants";
 import { pluralize } from "@/lib/format";
+import { mapPath } from "@/lib/maps";
 import { listModMaps, vanillaMapCounts } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Maps" };
@@ -12,10 +13,7 @@ export default function MapsPage({ searchParams }: PageProps<"/maps">) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <h1 className="font-display text-4xl font-bold tracking-tight uppercase sm:text-5xl">Maps</h1>
-      <p className="mt-2 mb-8 max-w-2xl text-text-2">
-        Every map with shared routes. Mod maps link to where you can download them, so your server and
-        players can install the same version the route was built on.
-      </p>
+      <div className="mb-8" />
       <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-surface" />}>
         <MapsContent searchParams={searchParams} />
       </Suspense>
@@ -36,11 +34,11 @@ async function MapsContent({ searchParams }: { searchParams: PageProps<"/maps">[
         {/* Fixed list (the base game's own levels), so it can't grow without bound. */}
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {VANILLA_MAPS.map((m) => {
-            const n = counts[m.level] ?? 0;
+            const n = counts[m.slug] ?? 0;
             return (
               <li key={m.level}>
                 <Link
-                  href={`/?map=${m.level}`}
+                  href={mapPath(m.slug)}
                   className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 hover:border-border-strong"
                 >
                   <span className="font-medium">{m.name}</span>
@@ -73,7 +71,7 @@ async function MapsContent({ searchParams }: { searchParams: PageProps<"/maps">[
         </div>
         {mods.items.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border-strong px-6 py-10 text-center text-sm text-muted">
-            {q ? `No mod maps match “${q}”.` : "No routes on mod maps yet."}
+            {q ? `No matches for “${q}”.` : "No mod maps yet."}
           </p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -83,7 +81,7 @@ async function MapsContent({ searchParams }: { searchParams: PageProps<"/maps">[
                 className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
               >
                 <div className="min-w-0">
-                  <Link href={`/?map=${encodeURIComponent(m.key)}`} className="block truncate font-medium hover:underline">
+                  <Link href={mapPath(m.key)} className="block truncate font-medium hover:underline">
                     {m.name}
                   </Link>
                   <p className="text-sm text-muted">{pluralize(m.routes, "route")}</p>

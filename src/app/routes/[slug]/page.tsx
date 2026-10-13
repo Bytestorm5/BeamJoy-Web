@@ -11,25 +11,26 @@ import { LayoutBadge } from "@/components/route-card";
 import { RouteMap } from "@/components/route-map";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDate, formatDistance } from "@/lib/format";
+import { mapPath, routePath } from "@/lib/maps";
 import { getRoute, myVote, routeActivity, type RouteDetail } from "@/lib/queries";
 import { ActivityChart } from "@/components/activity-chart";
 import { RatingButtons } from "@/components/rating";
 import { ViewTracker } from "@/components/view-tracker";
 import type { RouteGeometry } from "@/lib/sharecode/analyze";
 
-export async function generateMetadata({ params }: PageProps<"/routes/[id]">): Promise<Metadata> {
-  const route = await getRoute((await params).id);
+export async function generateMetadata({ params }: PageProps<"/routes/[slug]">): Promise<Metadata> {
+  const route = await getRoute((await params).slug);
   if (!route) return { title: "Route not found" };
   return {
     title: route.title,
+    alternates: { canonical: routePath(route.slug) },
     description: `${route.loopable ? "Circuit" : "Sprint"} on ${route.mapName}: ${formatDistance(route.distanceM)}, ${route.checkpoints} gates, ${route.corners} corners.`,
     openGraph: route.coverUrl ? { images: [route.coverUrl] } : undefined,
   };
 }
 
-export default async function RoutePage({ params }: PageProps<"/routes/[id]">) {
-  // Looked up before anything streams, so a missing route is a real 404.
-  const route = await getRoute((await params).id);
+export default async function RoutePage({ params }: PageProps<"/routes/[slug]">) {
+  const route = await getRoute((await params).slug);
   if (!route) notFound();
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -57,13 +58,13 @@ async function RouteView({ route }: { route: RouteDetail }) {
 
   return (
     <article>
-      <ViewTracker routeId={route.id} />
+      <ViewTracker slug={route.slug} />
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-text">
           Routes
         </Link>
         <span aria-hidden> / </span>
-        <Link href={`/?map=${encodeURIComponent(route.mapKey)}`} className="hover:text-text">
+        <Link href={mapPath(route.mapKey)} className="hover:text-text">
           {route.mapName}
         </Link>
       </nav>
@@ -78,7 +79,7 @@ async function RouteView({ route }: { route: RouteDetail }) {
             {route.title}
           </h1>
           <p className="mt-1 text-text-2">
-            on <span className="font-medium text-text">{route.mapName}</span> · by{" "}
+            by{" "}
             <Link href={`/u/${encodeURIComponent(route.author.id)}`} className="font-medium text-text hover:underline">
               {route.author.name}
             </Link>{" "}
@@ -88,7 +89,7 @@ async function RouteView({ route }: { route: RouteDetail }) {
             <Suspense
               fallback={
                 <RatingButtons
-                  routeId={route.id}
+                  slug={route.slug}
                   likes={route.likeCount}
                   dislikes={route.dislikeCount}
                   myVote={0}
@@ -113,7 +114,7 @@ async function RouteView({ route }: { route: RouteDetail }) {
 
           <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="rounded-xl border border-border bg-surface p-4">
-              <h2 className="mb-2 text-sm font-semibold text-text-2">Route map</h2>
+              <h2 className="mb-2 text-sm font-semibold text-text-2">Layout</h2>
               <RouteMap geometry={geometry} className="w-full" title={`Map of ${route.title}`} />
               <MapLegend loop={route.loopable} branching={route.branching} />
             </div>
@@ -135,14 +136,14 @@ async function RouteView({ route }: { route: RouteDetail }) {
           <section className="rounded-xl border border-border bg-surface p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <h2 className="text-sm font-semibold text-text-2">Activity</h2>
-              <p className="text-xs text-muted">Last 30 days · downloads are share-code copies</p>
+              <p className="text-xs text-muted">Last 30 days</p>
             </div>
             <ActivityChart data={activity} totals={{ views: route.viewCount, copies: route.copyCount }} />
           </section>
 
           {(route.description || yt || route.videoUrl) && (
             <section className="flex flex-col gap-4">
-              <h2 className="font-display text-2xl font-semibold uppercase">About this route</h2>
+              <h2 className="font-display text-2xl font-semibold uppercase">About</h2>
               {route.description && (
                 <p className="max-w-prose leading-relaxed whitespace-pre-line text-text-2">{route.description}</p>
               )}
@@ -158,7 +159,7 @@ async function RouteView({ route }: { route: RouteDetail }) {
                 </div>
               ) : route.videoUrl ? (
                 <a href={route.videoUrl} target="_blank" rel="noreferrer nofollow" className="text-accent hover:underline">
-                  Watch a video of this route ↗
+                  Watch video ↗
                 </a>
               ) : null}
             </section>
@@ -168,34 +169,28 @@ async function RouteView({ route }: { route: RouteDetail }) {
         <aside className="order-first flex flex-col gap-4 lg:sticky lg:top-24 lg:order-none lg:self-start">
           <section className="rounded-xl border border-border bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold text-text-2">Share code</h2>
-            <CopyCode routeId={route.id} code={route.shareCode} />
+            <CopyCode slug={route.slug} code={route.shareCode} />
             <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-text-2">
               <li>
-                Load <span className="font-medium text-text">{route.mapName}</span> on your BeamJoy server.
+                Load <span className="font-medium text-text">{route.mapName}</span> on your server.
               </li>
               <li>
-                Open <span className="font-medium text-text">Server Configuration → Races</span> and
-                click <span className="font-medium text-text">New race</span>.
+                <span className="font-medium text-text">Server Configuration → Races → New race</span>
               </li>
               <li>
-                Click <span className="font-medium text-text">Import from Code</span>, paste, then save.
+                <span className="font-medium text-text">Import from Code</span>, paste, save.
               </li>
             </ol>
-            <p className="mt-3 text-xs text-muted">
-              Downloaded {route.copyCount.toLocaleString("en-US")} {route.copyCount === 1 ? "time" : "times"}
-            </p>
           </section>
 
           <section className="rounded-xl border border-border bg-surface p-4">
             <h2 className="mb-1 text-sm font-semibold text-text-2">Map</h2>
             <p className="font-medium">{route.mapName}</p>
             {route.mapKind === "vanilla" ? (
-              <p className="mt-1 text-sm text-muted">Ships with BeamNG.drive — nothing to download.</p>
+              <p className="mt-1 text-sm text-muted">Included with BeamNG.drive.</p>
             ) : (
               <>
-                <p className="mt-1 text-sm text-muted">
-                  Mod map. Every player (and the server) needs it installed.
-                </p>
+                <p className="mt-1 text-sm text-muted">Mod map. The server and players need it.</p>
                 {route.mapDownloadUrl && (
                   <a
                     href={route.mapDownloadUrl}
@@ -208,11 +203,8 @@ async function RouteView({ route }: { route: RouteDetail }) {
                 )}
               </>
             )}
-            <Link
-              href={`/?map=${encodeURIComponent(route.mapKey)}`}
-              className="mt-3 inline-block text-sm text-accent hover:underline"
-            >
-              More routes on this map →
+            <Link href={mapPath(route.mapKey)} className="mt-3 inline-block text-sm text-accent hover:underline">
+              All routes on this map →
             </Link>
           </section>
 
@@ -241,18 +233,18 @@ function StatGrid({ route }: { route: RouteDetail }) {
   const distance = lo === hi ? lo : `${lo} – ${hi}`;
   const rows: { label: string; value: string | number; hint?: string }[] = [
     { label: route.loopable ? "Lap length" : "Length", value: distance },
-    { label: "Gates", value: route.checkpoints, hint: route.steps < route.checkpoints ? `${route.steps} on any one run` : undefined },
+    { label: "Gates", value: route.checkpoints, hint: route.steps < route.checkpoints ? `${route.steps} per run` : undefined },
     {
       label: "Corners",
       value: route.corners,
-      hint: route.corners === route.cornersAuto ? "Estimated from the gate layout" : `Set by the author (estimate: ${route.cornersAuto})`,
+      hint: route.corners === route.cornersAuto ? "Estimated" : `Set by author (est. ${route.cornersAuto})`,
     },
     { label: "Hairpins", value: route.hairpins },
     { label: "Grid slots", value: route.gridSlots },
     { label: "Sectors", value: route.sectors },
     ...(route.defaultLaps ? [{ label: "Default laps", value: route.defaultLaps }] : []),
     { label: "Climb", value: `${route.elevationGainM} m` },
-    { label: "Start", value: route.raceMode === "passive" ? "Rolling (passive)" : "Grid" },
+    { label: "Start", value: route.raceMode === "passive" ? "Rolling" : "Grid" },
   ];
   return (
     <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border">
@@ -294,7 +286,7 @@ function MapLegend({ loop, branching }: { loop: boolean; branching: boolean }) {
       {branching && (
         <li className="flex items-center gap-1.5">
           <span className="w-4 border-t-2 border-dashed border-[var(--route-branch)]" />
-          Alternate branch
+          Branch
         </li>
       )}
     </ul>
@@ -306,10 +298,10 @@ async function OwnerActions({ route }: { route: RouteDetail }) {
   if (!user || (user.id !== route.authorId && !isAdmin(user.id))) return null;
   return (
     <div className="flex gap-2">
-      <Link href={`/routes/${route.id}/edit`} className="btn-secondary">
+      <Link href={`${routePath(route.slug)}/edit`} className="btn-secondary">
         Edit
       </Link>
-      <DeleteRouteButton routeId={route.id} title={route.title} />
+      <DeleteRouteButton slug={route.slug} title={route.title} />
     </div>
   );
 }
@@ -319,7 +311,7 @@ async function Rating({ route }: { route: RouteDetail }) {
   const mine = user ? await myVote(route.id, user.id) : 0;
   return (
     <RatingButtons
-      routeId={route.id}
+      slug={route.slug}
       likes={route.likeCount}
       dislikes={route.dislikeCount}
       myVote={mine}

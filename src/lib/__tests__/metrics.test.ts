@@ -44,3 +44,19 @@ describe("isBot", () => {
     expect(isBot("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0 Safari/537.36")).toBe(false);
   });
 });
+
+describe("slugs", () => {
+  it("makes ASCII slugs from any title", async () => {
+    const { slugify } = await import("../format");
+    expect(slugify("Ünïcödé Rälly!")).toBe("unicode-rally");
+    expect(slugify("  Gas Station Loop -- Reverse ")).toBe("gas-station-loop-reverse");
+    expect(slugify("東京")).toBe("");
+  });
+
+  it("never gives a mod map a base-game map's slug", async () => {
+    const { modMapSlug, vanillaMapByLevel } = await import("../maps");
+    expect(modMapSlug("Italy")).toBe("italy-mod");
+    expect(modMapSlug("Nürburgring")).toBe("nurburgring");
+    expect(vanillaMapByLevel("west_coast_usa")?.slug).toBe("west-coast-usa");
+  });
+});

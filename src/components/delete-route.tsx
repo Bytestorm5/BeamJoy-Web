@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { deleteRoute } from "@/app/actions";
 
-export function DeleteRouteButton({ routeId, title }: { routeId: string; title: string }) {
+export function DeleteRouteButton({ slug, title }: { slug: string; title: string }) {
   const [pending, start] = useTransition();
   return (
     <button
@@ -11,8 +11,8 @@ export function DeleteRouteButton({ routeId, title }: { routeId: string; title: 
       disabled={pending}
       className="btn-ghost text-danger hover:text-danger"
       onClick={() => {
-        if (confirm(`Delete “${title}”? This removes the route and its screenshots for good.`)) {
-          start(() => deleteRoute(routeId));
+        if (confirm(`Delete “${title}”? This can’t be undone.`)) {
+          start(() => deleteRoute(slug));
         }
       }}
     >

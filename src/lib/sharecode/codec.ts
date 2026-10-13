@@ -60,7 +60,7 @@ async function gunzipLimited(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
     total += value.byteLength;
     if (total > MAX_DECOMPRESSED_BYTES) {
       await reader.cancel();
-      throw new ShareCodeError("This share code expands to more data than any real route needs.");
+      throw new ShareCodeError("Share code is too large.");
     }
     chunks.push(value);
   }
@@ -91,13 +91,13 @@ export function detectActivityType(code: string): ActivityType | null {
 export async function decodeShareCode(input: string): Promise<DecodedShareCode> {
   // Codes get mangled by chat apps: tolerate wrapped lines and stray spaces.
   const code = (input ?? "").replace(/\s+/g, "");
-  if (!code) throw new ShareCodeError("Paste a share code first.");
-  if (code.length > MAX_CODE_LENGTH) throw new ShareCodeError("That share code is too long.");
+  if (!code) throw new ShareCodeError("Paste a share code.");
+  if (code.length > MAX_CODE_LENGTH) throw new ShareCodeError("Share code is too long.");
 
   const type = detectActivityType(code);
   if (!type) {
     throw new ShareCodeError(
-      `Unrecognised share code. Race codes start with "${RACE_SHARE_CODE_PREFIX}" — use the race editor's “Copy Share Code” button in-game.`,
+      `Not a race share code (should start with ${RACE_SHARE_CODE_PREFIX}).`,
     );
   }
   const prefix = ACTIVITY_TYPES[type].prefix;
@@ -107,19 +107,19 @@ export async function decodeShareCode(input: string): Promise<DecodedShareCode> 
     json = await gunzipLimited(base64ToBytes(code.slice(prefix.length)));
   } catch (e) {
     if (e instanceof ShareCodeError) throw e;
-    throw new ShareCodeError("This share code is incomplete or corrupted. Try copying it again.");
+    throw new ShareCodeError("Share code is incomplete or corrupted. Copy it again.");
   }
 
   let raw: unknown;
   try {
     raw = JSON.parse(json);
   } catch {
-    throw new ShareCodeError("This share code is corrupted (its contents aren't valid JSON).");
+    throw new ShareCodeError("Share code is corrupted. Copy it again.");
   }
 
   const parsed = racePayloadSchema.safeParse(raw);
   if (!parsed.success) {
-    throw new ShareCodeError("This share code doesn't contain a valid race (missing gates or start positions).");
+    throw new ShareCodeError("Share code has no valid race.");
   }
   return { type, prefix, payload: parsed.data, code };
 }

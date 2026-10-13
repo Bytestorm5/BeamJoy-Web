@@ -14,7 +14,7 @@ const mono = JetBrains_Mono({ variable: "--font-jbmono", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: { default: "BeamJoy Routes", template: "%s · BeamJoy Routes" },
   description:
-    "Find and share BeamJoy race routes for BeamNG.drive multiplayer. Paste a share code, play it on your server.",
+    "Share and find race routes for BeamJoy servers on BeamMP.",
   // A plain static file: a generated icon route would try to write to the read-only cache on Workers.
   icons: { icon: "/icon.svg" },
 };

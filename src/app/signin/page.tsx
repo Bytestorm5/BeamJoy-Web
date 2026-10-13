@@ -13,7 +13,7 @@ export default function SignInPage({ searchParams }: PageProps<"/signin">) {
   return (
     <div className="mx-auto flex max-w-sm flex-col px-4 py-16">
       <h1 className="font-display text-4xl font-bold tracking-tight uppercase">Sign in</h1>
-      <p className="mt-2 mb-8 text-text-2">Sign in to share routes and edit the ones you&apos;ve posted.</p>
+      <p className="mt-2 mb-8 text-text-2">To share and rate routes.</p>
       <Suspense>
         <Providers searchParams={searchParams} />
       </Suspense>
@@ -30,7 +30,7 @@ async function Providers({ searchParams }: { searchParams: PageProps<"/signin">[
     <div className="flex flex-col gap-3">
       {sp.error && (
         <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm">
-          Sign-in didn&apos;t complete. Please try again.
+          Sign-in failed. Try again.
         </p>
       )}
       {oauth.map((p) => (

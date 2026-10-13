@@ -13,13 +13,16 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
 - **Catalog** (`/`): paginated grid of routes, filterable by map, layout (circuit/sprint), surface,
   length, gates, corners, grid size, branching and tags, with sorting. Every filter lives in the URL,
   so filtered views can be linked.
-- **Route pages** (`/routes/[id]`): screenshot gallery, a top-down route map drawn from the gate
+- **Route pages** (`/routes/<slug>`): screenshot gallery, a top-down route map drawn from the gate
   positions, an elevation profile, stats, the share code with a copy button, and the map download.
 - **Submitting** (`/submit`): paste a code and the route is previewed and measured live in the
   browser. The server decodes and measures it again on submit and never trusts numbers sent by the
   browser. Screenshots are downscaled in the browser before upload.
-- **Maps** (`/maps`): base-game maps and every mod map routes have been shared on, with download
-  links.
+- **Maps** (`/maps`, `/maps/<slug>`): base-game maps and every mod map with routes; each map page
+  is the catalog filtered to that map.
+- **URLs use slugs**, never database ids. A route's slug comes from its first title (`-2`, `-3`… on
+  collisions) and doesn't change when the title is edited, so links stay valid. Screenshot keys are
+  random, and server actions take the slug and resolve the id on the server.
 - **Metrics**: per-route views and downloads (share-code copies) bucketed by UTC day, with a
   30-day chart on each route page; like/dislike voting. Catalog cards show views, downloads
   and like %, and the catalog can sort by "Top rated" (Wilson lower bound, so one lucky vote

@@ -8,7 +8,7 @@ import type { Filters } from "@/lib/filters";
 
 export type MapFacet = { key: string; name: string; kind: string; routes: number };
 
-function formToQuery(form: HTMLFormElement) {
+function formToQuery(form: HTMLFormElement, basePath: string) {
   const fd = new FormData(form);
   const p = new URLSearchParams();
   for (const [k, v] of fd.entries()) {
@@ -16,7 +16,7 @@ function formToQuery(form: HTMLFormElement) {
     if (s && !(k === "sort" && s === "new")) p.append(k, s);
   }
   const qs = p.toString();
-  return qs ? `/?${qs}` : "/";
+  return qs ? `${basePath}?${qs}` : basePath;
 }
 
 /**
@@ -26,10 +26,14 @@ function formToQuery(form: HTMLFormElement) {
 export function FilterPanel({
   filters,
   maps,
+  showMaps = true,
+  basePath = "/",
   activeCount,
 }: {
   filters: Filters;
   maps: MapFacet[];
+  showMaps?: boolean;
+  basePath?: string;
   activeCount: number;
 }) {
   const router = useRouter();
@@ -39,7 +43,7 @@ export function FilterPanel({
 
   const apply = () => {
     if (!formRef.current) return;
-    const url = formToQuery(formRef.current);
+    const url = formToQuery(formRef.current, basePath);
     startTransition(() => router.push(url, { scroll: false }));
   };
 
@@ -54,7 +58,7 @@ export function FilterPanel({
   return (
     <form
       ref={formRef}
-      action="/"
+      action={basePath}
       method="get"
       onChange={(e) => {
         // Text/number fields apply on blur/Enter so typing doesn't spam navigations.
@@ -83,7 +87,7 @@ export function FilterPanel({
           name="q"
           type="search"
           defaultValue={filters.q}
-          placeholder="Name, map, tag…"
+          placeholder="Search routes"
           className="field"
           onBlur={(e) => e.target.value !== filters.q && apply()}
         />
@@ -113,6 +117,7 @@ export function FilterPanel({
         </div>
       </fieldset>
 
+      {showMaps && (
       <fieldset>
         <legend className="label">Map</legend>
         {maps.length > 8 && (
@@ -129,7 +134,7 @@ export function FilterPanel({
         {/* Bounded and scrollable: the map list grows with every new mod map. */}
         <div className="max-h-60 overflow-y-auto rounded-lg border border-border bg-surface">
           {visibleMaps.length === 0 && (
-            <p className="px-3 py-2 text-sm text-muted">{maps.length ? "No matching maps" : "No routes yet"}</p>
+            <p className="px-3 py-2 text-sm text-muted">{maps.length ? "No matches" : "No maps yet"}</p>
           )}
           {visibleMaps.map((m) => (
             <label
@@ -150,6 +155,7 @@ export function FilterPanel({
           ))}
         </div>
       </fieldset>
+      )}
 
       <fieldset>
         <legend className="label">Surface</legend>
@@ -197,7 +203,7 @@ export function FilterPanel({
           defaultChecked={filters.branching}
           className="size-4 accent-[var(--accent)]"
         />
-        Only routes with alternate branches
+        Has branches
       </label>
 
       <div className="flex gap-2">
@@ -205,7 +211,7 @@ export function FilterPanel({
           {pending ? "Updating…" : "Apply"}
         </button>
         {activeCount > 0 && (
-          <Link href="/" className="btn-secondary">
+          <Link href={basePath} className="btn-secondary">
             Reset
           </Link>
         )}
@@ -268,7 +274,7 @@ function Range({
   );
 }
 
-export function SortSelect({ value, query }: { value: string; query: string }) {
+export function SortSelect({ value, query, basePath = "/" }: { value: string; query: string; basePath?: string }) {
   const router = useRouter();
   return (
     <label className="flex items-center gap-2 text-sm text-muted">
@@ -281,7 +287,7 @@ export function SortSelect({ value, query }: { value: string; query: string }) {
           if (e.target.value === "new") p.delete("sort");
           else p.set("sort", e.target.value);
           const qs = p.toString();
-          router.push(qs ? `/?${qs}` : "/", { scroll: false });
+          router.push(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
         }}
         className="field w-auto py-1.5"
       >

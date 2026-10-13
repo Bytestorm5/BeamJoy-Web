@@ -17,7 +17,10 @@ export const users = sqliteTable("users", {
 export const routes = sqliteTable(
   "routes",
   {
+    /** Internal key; never shown in URLs. */
     id: text("id").primaryKey(),
+    /** Public URL key (/routes/<slug>). Set once from the first title, so links never break. */
+    slug: text("slug").notNull().unique(),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     authorId: text("author_id")
@@ -29,7 +32,7 @@ export const routes = sqliteTable(
 
     /** "vanilla" | "custom" */
     mapKind: text("map_kind").notNull(),
-    /** Grouping key for filters: the level folder for vanilla maps, `custom:<slug>` otherwise. */
+    /** The map's slug (see lib/maps.ts): /maps/<slug> and the catalog's `?map=` filter. */
     mapKey: text("map_key").notNull(),
     mapName: text("map_name").notNull(),
     mapDownloadUrl: text("map_download_url"),

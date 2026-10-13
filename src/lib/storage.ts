@@ -31,12 +31,9 @@ function publicUrl(key: string) {
   return base ? `${base}/${key}` : `/uploads/${key}`;
 }
 
-export async function storeImage(
-  routeId: string,
-  bytes: Uint8Array,
-  type: string,
-): Promise<{ url: string; storageKey: string }> {
-  const key = `screenshots/${routeId}/${nanoid(12)}.${IMAGE_TYPES[type]}`;
+export async function storeImage(bytes: Uint8Array, type: string): Promise<{ url: string; storageKey: string }> {
+  // Random keys: nothing about the route (or its internal id) leaks through image URLs.
+  const key = `screenshots/${nanoid(16)}.${IMAGE_TYPES[type]}`;
   await bucket().put(key, bytes, {
     httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" },
   });
@@ -49,6 +46,6 @@ export async function deleteImages(storageKeys: string[]) {
 
 export async function readUpload(key: string) {
   // Only screenshot keys are publicly readable; anything else in the bucket stays private.
-  if (!/^screenshots\/[\w-]+\/[\w-]+\.(jpg|png|webp|avif)$/.test(key)) return null;
+  if (!/^screenshots\/[\w-]+\.(jpg|png|webp|avif)$/.test(key)) return null;
   return bucket().get(key);
 }

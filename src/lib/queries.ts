@@ -3,6 +3,8 @@ import { cache } from "react";
 import { and, asc, count, desc, eq, exists, gte, inArray, like, lte, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { PAGE_SIZE } from "./constants";
+import { slugify } from "./format";
+import { vanillaMapBySlug } from "./maps";
 import { fillDays, utcDay } from "./metrics";
 import type { Filters } from "./filters";
 
@@ -65,7 +67,7 @@ const ORDER = {
 } as const;
 
 export const cardColumns = {
-  id: routes.id,
+  slug: routes.slug,
   title: routes.title,
   mapName: routes.mapName,
   mapKind: routes.mapKind,
@@ -119,24 +121,16 @@ export async function mapFacets() {
     .orderBy(desc(count()), asc(sql`max(${routes.mapName})`));
 }
 
-export async function popularTags(limit = 16) {
-  return getDb()
-    .select({ tag: routeTags.tag, n: count() })
-    .from(routeTags)
-    .groupBy(routeTags.tag)
-    .orderBy(desc(count()), asc(routeTags.tag))
-    .limit(limit);
-}
-
-/** Deduped per request: generateMetadata and the page body both need it. */
-export const getRoute = cache(async (id: string) => {
+/** By public slug. Deduped per request: generateMetadata and the page body both need it. */
+export const getRoute = cache(async (slug: string) => {
   const [row] = await getDb()
     .select({ route: routes, author: { id: users.id, name: users.name, image: users.image } })
     .from(routes)
     .innerJoin(users, eq(users.id, routes.authorId))
-    .where(eq(routes.id, id))
+    .where(eq(routes.slug, slug))
     .limit(1);
   if (!row) return null;
+  const id = row.route.id;
   const [images, tags] = await Promise.all([
     getDb().select().from(routeImages).where(eq(routeImages.routeId, id)).orderBy(asc(routeImages.position)),
     getDb().select({ tag: routeTags.tag }).from(routeTags).where(eq(routeTags.routeId, id)).orderBy(asc(routeTags.tag)),
@@ -151,16 +145,6 @@ export async function getUser(id: string) {
   return u ?? null;
 }
 
-export async function siteTotals() {
-  const [row] = await getDb()
-    .select({
-      routes: count(),
-      maps: sql<number>`count(distinct ${routes.mapKey})`,
-      km: sql<number>`coalesce(sum(${routes.distanceM}), 0) / 1000.0`,
-    })
-    .from(routes);
-  return row;
-}
 
 export const MAPS_PAGE_SIZE = 30;
 
@@ -219,3 +203,36 @@ export async function myVote(routeId: string, userId: string): Promise<-1 | 0 | 
     .limit(1);
   return row?.value === 1 ? 1 : row?.value === -1 ? -1 : 0;
 }
+
+/** First free slug for a new route's title: `name`, then `name-2`, `name-3`… */
+export async function freeRouteSlug(title: string) {
+  const base = slugify(title) || "route";
+  const taken = new Set(
+    (
+      await getDb()
+        .select({ slug: routes.slug })
+        .from(routes)
+        .where(or(eq(routes.slug, base), like(routes.slug, `${base}-%`)))
+    ).map((r) => r.slug),
+  );
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
+}
+
+export type MapInfo = { slug: string; name: string; kind: "vanilla" | "custom"; downloadUrl: string | null; routes: number };
+
+/** A map by slug: every base-game map, or a mod map that has at least one route. */
+export const getMap = cache(async (slug: string): Promise<MapInfo | null> => {
+  const [row] = await getDb()
+    .select({
+      name: sql<string>`max(${routes.mapName})`,
+      downloadUrl: sql<string | null>`max(${routes.mapDownloadUrl})`,
+      routes: count(),
+    })
+    .from(routes)
+    .where(eq(routes.mapKey, slug));
+  const vanilla = vanillaMapBySlug(slug);
+  if (vanilla) return { slug, name: vanilla.name, kind: "vanilla", downloadUrl: null, routes: row?.routes ?? 0 };
+  if (!row?.routes) return null;
+  return { slug, name: row.name, kind: "custom", downloadUrl: row.downloadUrl, routes: row.routes };
+});

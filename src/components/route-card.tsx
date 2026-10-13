@@ -3,6 +3,7 @@ import type { RouteGeometry } from "@/lib/sharecode/analyze";
 import type { RouteCard as RouteCardData } from "@/lib/queries";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDistance } from "@/lib/format";
+import { routePath } from "@/lib/maps";
 import { RouteMap } from "./route-map";
 
 export function LayoutBadge({ loopable, branching }: { loopable: boolean; branching?: boolean }) {
@@ -85,7 +86,7 @@ export function RouteCard({ route }: { route: RouteCardData }) {
         </div>
         <div className="min-w-0">
           <h3 className="truncate text-base font-semibold">
-            <Link href={`/routes/${route.id}`} className="after:absolute after:inset-0">
+            <Link href={routePath(route.slug)} className="after:absolute after:inset-0">
               {route.title}
             </Link>
           </h3>

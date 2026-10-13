@@ -5,11 +5,10 @@ import { useState, useTransition } from "react";
 import { voteRoute } from "@/app/actions";
 
 type Props = {
-  routeId: string;
+  slug: string;
   likes: number;
   dislikes: number;
   myVote: -1 | 0 | 1;
-  /** null = signed out; "author" = can't rate own route. */
   viewer: "signed-out" | "author" | "voter";
 };
 
@@ -21,7 +20,7 @@ function Thumb({ down }: { down?: boolean }) {
   );
 }
 
-export function RatingButtons({ routeId, likes, dislikes, myVote, viewer }: Props) {
+export function RatingButtons({ slug, likes, dislikes, myVote, viewer }: Props) {
   const [state, setState] = useState({ likes, dislikes, myVote });
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -36,7 +35,7 @@ export function RatingButtons({ routeId, likes, dislikes, myVote, viewer }: Prop
     setState({ likes: adj(prev.likes, 1), dislikes: adj(prev.dislikes, -1), myVote: next });
     setError(null);
     start(async () => {
-      const res = await voteRoute(routeId, next);
+      const res = await voteRoute(slug, next);
       setState({ likes: res.likes, dislikes: res.dislikes, myVote: res.myVote });
       if (res.error) setError(res.error);
     });
@@ -55,7 +54,7 @@ export function RatingButtons({ routeId, likes, dislikes, myVote, viewer }: Prop
     }`;
     if (viewer === "signed-out") {
       return (
-        <Link href={`/signin?callbackUrl=/routes/${routeId}`} className={cls} title={`Sign in to ${label.toLowerCase()}`}>
+        <Link href={`/signin?callbackUrl=/routes/${slug}`} className={cls} title={`Sign in to ${label.toLowerCase()}`}>
           <Thumb down={v === -1} /> {count}
           <span className="sr-only">{label}s. Sign in to rate.</span>
         </Link>
@@ -82,7 +81,7 @@ export function RatingButtons({ routeId, likes, dislikes, myVote, viewer }: Prop
         {btn(1)}
         {btn(-1)}
         <span className="text-sm text-muted">
-          {pct == null ? "No ratings yet" : `${pct}% liked`}
+          {pct == null ? "No ratings" : `${pct}% liked`}
         </span>
       </div>
       {error && (

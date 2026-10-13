@@ -18,7 +18,7 @@ export type RouteFormInitial = {
   videoUrl: string;
   cornersOverride: number | null;
   mapKind: "vanilla" | "custom";
-  vanillaLevel: string;
+  vanillaMap: string;
   customMapName: string;
   customMapUrl: string;
   images: { id: string; url: string }[];
@@ -33,7 +33,7 @@ const EMPTY: RouteFormInitial = {
   videoUrl: "",
   cornersOverride: null,
   mapKind: "vanilla",
-  vanillaLevel: "",
+  vanillaMap: "",
   customMapName: "",
   customMapUrl: "",
   images: [],
@@ -54,7 +54,7 @@ function useDecodedCode(code: string): Decoded | null {
         const d = await decodeShareCode(trimmed);
         decoded = { ok: true, analysis: analyzeRace(d.payload), name: d.payload.name };
       } catch (e) {
-        decoded = { ok: false, error: e instanceof Error ? e.message : "Couldn't read that code." };
+        decoded = { ok: false, error: e instanceof Error ? e.message : "Invalid code." };
       }
       if (!cancelled) setResult({ code: trimmed, decoded });
     }, 250);
@@ -164,7 +164,7 @@ export function RouteForm({
         </div>
       )}
 
-      <Section step={1} title="Share code" hint="In the race editor, press “Copy Share Code” and paste it here.">
+      <Section step={1} title="Share code" hint="From the race editor’s “Copy Share Code” button.">
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <label htmlFor="shareCode" className="label">
@@ -203,19 +203,19 @@ export function RouteForm({
                 </dl>
                 <p className="mt-1 text-center text-xs text-muted">
                   {stats!.loopable ? "Circuit" : "Sprint"}
-                  {stats!.branching ? " with alternate branches" : ""} · {stats!.elevationGainM} m climb
+                  {stats!.branching ? " · branching" : ""} · {stats!.elevationGainM} m climb
                 </p>
               </>
             ) : (
               <p className="m-auto max-w-56 text-center text-sm text-muted">
-                {code.trim() ? "Checking code…" : "Paste a code to preview the route and its stats."}
+                {code.trim() ? "Checking…" : "Preview appears here."}
               </p>
             )}
           </div>
         </div>
       </Section>
 
-      <Section step={2} title="Map" hint="Which map does this route run on?">
+      <Section step={2} title="Map">
         <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-border bg-surface-2 p-1 sm:w-96">
           {(["vanilla", "custom"] as const).map((k) => (
             <label key={k}>
@@ -235,26 +235,26 @@ export function RouteForm({
         </div>
         {mapKind === "vanilla" ? (
           <div className="sm:w-96">
-            <label htmlFor="vanillaLevel" className="label">
+            <label htmlFor="vanillaMap" className="label">
               Map
             </label>
             <select
-              id="vanillaLevel"
-              name="vanillaLevel"
-              defaultValue={initial.vanillaLevel}
-              aria-invalid={!!errors.vanillaLevel}
+              id="vanillaMap"
+              name="vanillaMap"
+              defaultValue={initial.vanillaMap}
+              aria-invalid={!!errors.vanillaMap}
               className="field"
             >
               <option value="" disabled>
                 Choose a map…
               </option>
               {VANILLA_MAPS.map((m) => (
-                <option key={m.level} value={m.level}>
+                <option key={m.slug} value={m.slug}>
                   {m.name}
                 </option>
               ))}
             </select>
-            <FieldError msg={errors.vanillaLevel} />
+            <FieldError msg={errors.vanillaMap} />
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -288,9 +288,7 @@ export function RouteForm({
               />
               <FieldError msg={errors.customMapUrl} />
             </div>
-            <p className="text-sm text-muted sm:col-span-2">
-              Use the same map name as other routes on this map so they group together in the catalog.
-            </p>
+            <p className="text-sm text-muted sm:col-span-2">Same name as other routes on this map groups them together.</p>
           </div>
         )}
       </Section>
@@ -326,7 +324,7 @@ export function RouteForm({
               defaultValue={initial.description}
               rows={5}
               maxLength={LIMITS.description}
-              placeholder="Where it goes, what cars suit it, tricky sections, recommended laps…"
+              placeholder="Cars, laps, tricky sections…"
               className="field"
             />
             <FieldError msg={errors.description} />
@@ -357,12 +355,12 @@ export function RouteForm({
                 max={999}
                 inputMode="numeric"
                 defaultValue={initial.cornersOverride ?? ""}
-                placeholder={stats ? `${stats.corners} (estimated)` : "Estimated from the code"}
+                placeholder={stats ? `${stats.corners} (estimated)` : "Estimated"}
                 aria-describedby="corners-hint"
                 className="field"
               />
               <p id="corners-hint" className="mt-1.5 text-xs text-muted">
-                Leave blank to use our estimate from the gate layout.
+                Blank uses the estimate.
               </p>
               <FieldError msg={errors.cornersOverride} />
             </div>
@@ -417,7 +415,7 @@ export function RouteForm({
       <Section
         step={4}
         title="Screenshots"
-        hint={`Up to ${LIMITS.images}. The first one becomes the cover. Large images are resized before upload.`}
+        hint={`Up to ${LIMITS.images}. The first is the cover.`}
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {initial.images.map((img) => {
@@ -483,7 +481,7 @@ export function RouteForm({
       <div className="flex flex-wrap items-center justify-end gap-3">
         {Object.keys(errors).length > 0 && (
           <p className="mr-auto text-sm text-danger" role="alert">
-            Some fields need attention.
+            Check the highlighted fields.
           </p>
         )}
         <button type="submit" disabled={busy} className="btn-primary px-6 py-2.5">

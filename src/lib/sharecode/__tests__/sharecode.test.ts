@@ -46,7 +46,7 @@ describe("share codes", () => {
 
   it("refuses gzip bombs", async () => {
     const huge = await encodeRaceShareCode({ ...rectangle, padding: "x".repeat(9_000_000) } as RacePayload);
-    await expect(decodeShareCode(huge)).rejects.toThrow(/more data/);
+    await expect(decodeShareCode(huge)).rejects.toThrow(/too large/);
   });
 });
 

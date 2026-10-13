@@ -1,4 +1,3 @@
-import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { Pagination } from "@/components/pagination";
 import { RouteCard } from "@/components/route-card";
@@ -44,21 +43,18 @@ async function UserRoutes({
         <div>
           <h1 className="font-display text-4xl font-bold tracking-tight uppercase">{user.name}</h1>
           <p className="text-text-2">
-            {pluralize(result.total, "route")} shared ·{" "}
-            <Link href={`/?author=${encodeURIComponent(id)}`} className="text-accent hover:underline">
-              filter in catalog
-            </Link>
+            {pluralize(result.total, "route")}
           </p>
         </div>
       </header>
       {result.items.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center text-muted">
-          No routes shared yet.
+          No routes yet.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {result.items.map((r) => (
-            <RouteCard key={r.id} route={r} />
+            <RouteCard key={r.slug} route={r} />
           ))}
         </div>
       )}

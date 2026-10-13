@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { LIMITS, SURFACES, VANILLA_MAP_BY_LEVEL } from "./constants";
-import { slugify } from "./format";
+import { LIMITS, SURFACES } from "./constants";
+import { modMapSlug, vanillaMapBySlug } from "./maps";
 
 const httpUrl = z
   .string()
@@ -14,7 +14,7 @@ const httpUrl = z
     } catch {
       return false;
     }
-  }, "Enter a full link starting with https://");
+  }, "Enter a link starting with https://");
 
 const optionalUrl = z
   .string()
@@ -23,7 +23,7 @@ const optionalUrl = z
   .pipe(httpUrl.optional());
 
 const baseSchema = z.object({
-  title: z.string().trim().min(3, "Give the route a name (3+ characters).").max(LIMITS.title),
+  title: z.string().trim().min(3, "Name needs 3+ characters.").max(LIMITS.title),
   description: z.string().trim().max(LIMITS.description).default(""),
   surface: z.enum(SURFACES.map((s) => s.value) as [string, ...string[]]),
   tags: z
@@ -53,7 +53,7 @@ const baseSchema = z.object({
     .transform((s) => (s === "" ? null : Number(s)))
     .pipe(z.number().int().min(0).max(999).nullable()),
   mapKind: z.enum(["vanilla", "custom"]),
-  vanillaLevel: z.string().optional(),
+  vanillaMap: z.string().optional(),
   customMapName: z.string().trim().max(LIMITS.mapName).optional(),
   customMapUrl: z.string().trim().optional(),
 });
@@ -78,7 +78,7 @@ export function parseRouteForm(
       "videoUrl",
       "cornersOverride",
       "mapKind",
-      "vanillaLevel",
+      "vanillaMap",
       "customMapName",
       "customMapUrl",
     ].map((k) => [k, (fd.get(k) as string | null) ?? ""]),
@@ -95,24 +95,21 @@ export function parseRouteForm(
   const d = parsed.data;
 
   if (d.mapKind === "vanilla") {
-    const name = d.vanillaLevel ? VANILLA_MAP_BY_LEVEL[d.vanillaLevel] : undefined;
-    if (!name) return { ok: false, errors: { vanillaLevel: "Pick the map this route runs on." } };
-    return {
-      ok: true,
-      data: { ...d, mapKey: d.vanillaLevel!, mapName: name, mapDownloadUrl: null },
-    };
+    const map = d.vanillaMap ? vanillaMapBySlug(d.vanillaMap) : null;
+    if (!map) return { ok: false, errors: { vanillaMap: "Pick a map." } };
+    return { ok: true, data: { ...d, mapKey: map.slug, mapName: map.name, mapDownloadUrl: null } };
   }
 
   const name = d.customMapName ?? "";
-  if (name.length < 2) errors.customMapName = "Enter the map's name.";
+  if (name.length < 2) errors.customMapName = "Enter the map name.";
   const url = httpUrl.safeParse(d.customMapUrl ?? "");
-  if (!url.success) errors.customMapUrl = "Link to where players can download the map (https://…).";
+  if (!url.success) errors.customMapUrl = "Enter a download link (https://…).";
   if (Object.keys(errors).length) return { ok: false, errors };
   return {
     ok: true,
     data: {
       ...d,
-      mapKey: `custom:${slugify(name) || "map"}`,
+      mapKey: modMapSlug(name),
       mapName: name,
       mapDownloadUrl: url.data!,
     },
