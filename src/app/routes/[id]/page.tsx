@@ -11,7 +11,10 @@ import { LayoutBadge } from "@/components/route-card";
 import { RouteMap } from "@/components/route-map";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDate, formatDistance } from "@/lib/format";
-import { getRoute, type RouteDetail } from "@/lib/queries";
+import { getRoute, myVote, routeActivity, type RouteDetail } from "@/lib/queries";
+import { ActivityChart } from "@/components/activity-chart";
+import { RatingButtons } from "@/components/rating";
+import { ViewTracker } from "@/components/view-tracker";
 import type { RouteGeometry } from "@/lib/sharecode/analyze";
 
 export async function generateMetadata({ params }: PageProps<"/routes/[id]">): Promise<Metadata> {
@@ -24,12 +27,13 @@ export async function generateMetadata({ params }: PageProps<"/routes/[id]">): P
   };
 }
 
-export default function RoutePage({ params }: PageProps<"/routes/[id]">) {
+export default async function RoutePage({ params }: PageProps<"/routes/[id]">) {
+  // Looked up before anything streams, so a missing route is a real 404.
+  const route = await getRoute((await params).id);
+  if (!route) notFound();
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Suspense fallback={<div className="h-[40rem] animate-pulse rounded-xl bg-surface" />}>
-        <RouteView params={params} />
-      </Suspense>
+      <RouteView route={route} />
     </div>
   );
 }
@@ -46,14 +50,14 @@ function youtubeId(url: string) {
   return null;
 }
 
-async function RouteView({ params }: { params: PageProps<"/routes/[id]">["params"] }) {
-  const route = await getRoute((await params).id);
-  if (!route) notFound();
+async function RouteView({ route }: { route: RouteDetail }) {
+  const activity = await routeActivity(route.id, 30);
   const geometry = JSON.parse(route.geometry) as RouteGeometry;
   const yt = route.videoUrl ? youtubeId(route.videoUrl) : null;
 
   return (
     <article>
+      <ViewTracker routeId={route.id} />
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-text">
           Routes
@@ -80,6 +84,21 @@ async function RouteView({ params }: { params: PageProps<"/routes/[id]">["params
             </Link>{" "}
             · {formatDate(route.createdAt)}
           </p>
+          <div className="mt-4">
+            <Suspense
+              fallback={
+                <RatingButtons
+                  routeId={route.id}
+                  likes={route.likeCount}
+                  dislikes={route.dislikeCount}
+                  myVote={0}
+                  viewer="signed-out"
+                />
+              }
+            >
+              <Rating route={route} />
+            </Suspense>
+          </div>
         </div>
         <Suspense>
           <OwnerActions route={route} />
@@ -111,6 +130,14 @@ async function RouteView({ params }: { params: PageProps<"/routes/[id]">["params
               </p>
             </div>
             <ElevationProfile geometry={geometry} />
+          </section>
+
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="text-sm font-semibold text-text-2">Activity</h2>
+              <p className="text-xs text-muted">Last 30 days · downloads are share-code copies</p>
+            </div>
+            <ActivityChart data={activity} totals={{ views: route.viewCount, copies: route.copyCount }} />
           </section>
 
           {(route.description || yt || route.videoUrl) && (
@@ -155,7 +182,7 @@ async function RouteView({ params }: { params: PageProps<"/routes/[id]">["params
               </li>
             </ol>
             <p className="mt-3 text-xs text-muted">
-              Copied {route.copyCount.toLocaleString("en-US")} {route.copyCount === 1 ? "time" : "times"}
+              Downloaded {route.copyCount.toLocaleString("en-US")} {route.copyCount === 1 ? "time" : "times"}
             </p>
           </section>
 
@@ -284,5 +311,19 @@ async function OwnerActions({ route }: { route: RouteDetail }) {
       </Link>
       <DeleteRouteButton routeId={route.id} title={route.title} />
     </div>
+  );
+}
+
+async function Rating({ route }: { route: RouteDetail }) {
+  const user = await currentUser();
+  const mine = user ? await myVote(route.id, user.id) : 0;
+  return (
+    <RatingButtons
+      routeId={route.id}
+      likes={route.likeCount}
+      dislikes={route.dislikeCount}
+      myVote={mine}
+      viewer={!user ? "signed-out" : user.id === route.authorId ? "author" : "voter"}
+    />
   );
 }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { updateRoute } from "@/app/actions";
 import { currentUser, isAdmin } from "@/auth";
 import { RouteForm } from "@/components/route-form";
@@ -9,20 +8,26 @@ import { getRoute } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Edit route" };
 
-export default function EditRoutePage({ params }: PageProps<"/routes/[id]/edit">) {
+export default async function EditRoutePage({ params }: PageProps<"/routes/[id]/edit">) {
+  const { id } = await params;
+  const [route, user] = await Promise.all([getRoute(id), currentUser()]);
+  if (!route) notFound();
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-surface" />}>
-        <Editor params={params} />
-      </Suspense>
+      <Editor id={id} route={route} user={user} />
     </div>
   );
 }
 
-async function Editor({ params }: { params: PageProps<"/routes/[id]/edit">["params"] }) {
-  const { id } = await params;
-  const [route, user] = await Promise.all([getRoute(id), currentUser()]);
-  if (!route) notFound();
+function Editor({
+  id,
+  route,
+  user,
+}: {
+  id: string;
+  route: NonNullable<Awaited<ReturnType<typeof getRoute>>>;
+  user: Awaited<ReturnType<typeof currentUser>>;
+}) {
   if (!user || (user.id !== route.authorId && !isAdmin(user.id))) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">

@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "beamjoy-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Secrets and vars set in the Cloudflare dashboard (AUTH_SECRET, OAuth credentials,
+  // ADMIN_USER_IDS, ...) survive `wrangler deploy` instead of being wiped.
+  "keep_vars": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference used by OpenNext; must match "name" above.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "beamjoy-web"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beamjoy-web",
+      // `npx wrangler d1 create beamjoy-web` prints the real id. Local dev works without it.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      // Route screenshots. Create with `npx wrangler r2 bucket create beamjoy-web-screenshots`.
+      "binding": "SCREENSHOTS",
+      "bucket_name": "beamjoy-web-screenshots"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

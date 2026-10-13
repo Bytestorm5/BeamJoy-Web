@@ -27,6 +27,35 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+const EyeIcon = () => (
+  <svg viewBox="0 0 20 20" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z" />
+    <circle cx="10" cy="10" r="2.5" />
+  </svg>
+);
+const DownloadIcon = () => (
+  <svg viewBox="0 0 20 20" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M10 3v10m0 0-4-4m4 4 4-4M4 17h12" />
+  </svg>
+);
+
+const compact = (n: number) =>
+  n.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
+
+function RatingPill({ likes, dislikes }: { likes: number; dislikes: number }) {
+  const total = likes + dislikes;
+  if (!total) return null;
+  const pct = Math.round((likes / total) * 100);
+  return (
+    <span
+      className="rounded-full bg-surface-2 px-1.5 py-0.5 font-medium text-text-2"
+      title={`${likes} likes, ${dislikes} dislikes`}
+    >
+      {pct}% liked<span className="sr-only">, {total} ratings</span>
+    </span>
+  );
+}
+
 export function RouteCard({ route }: { route: RouteCardData }) {
   const geometry = JSON.parse(route.geometry) as RouteGeometry;
   return (
@@ -62,7 +91,7 @@ export function RouteCard({ route }: { route: RouteCardData }) {
           </h3>
           <p className="truncate text-sm text-muted">
             {route.mapName}
-            {route.mapKind === "custom" && <span className="text-muted"> · mod map</span>}
+            {route.mapKind === "custom" && " (mod)"} · by {route.authorName}
           </p>
         </div>
         <dl className="mt-auto grid grid-cols-4 gap-2 border-t border-border pt-3">
@@ -71,11 +100,20 @@ export function RouteCard({ route }: { route: RouteCardData }) {
           <Stat label="Corners" value={route.corners} />
           <Stat label="Grid" value={route.gridSlots} />
         </dl>
-        <div className="flex items-center justify-between text-xs text-muted">
-          <span className="truncate">by {route.authorName}</span>
-          <span className="shrink-0 tabular-nums">
-            {route.copyCount.toLocaleString("en-US")} {route.copyCount === 1 ? "copy" : "copies"}
+        <div className="flex items-center justify-between gap-3 text-xs text-muted tabular-nums">
+          <span className="flex items-center gap-3">
+            <span className="flex items-center gap-1" title={`${route.viewCount.toLocaleString("en-US")} views`}>
+              <EyeIcon />
+              {compact(route.viewCount)}
+              <span className="sr-only"> views</span>
+            </span>
+            <span className="flex items-center gap-1" title={`${route.copyCount.toLocaleString("en-US")} downloads`}>
+              <DownloadIcon />
+              {compact(route.copyCount)}
+              <span className="sr-only"> downloads</span>
+            </span>
           </span>
+          <RatingPill likes={route.likeCount} dislikes={route.dislikeCount} />
         </div>
       </div>
     </article>

@@ -36,7 +36,9 @@ export const SURFACE_LABEL: Record<string, string> = Object.fromEntries(
 
 export const SORTS = [
   { value: "new", label: "Newest" },
-  { value: "popular", label: "Most copied" },
+  { value: "top", label: "Top rated" },
+  { value: "popular", label: "Most downloaded" },
+  { value: "viewed", label: "Most viewed" },
   { value: "longest", label: "Longest" },
   { value: "shortest", label: "Shortest" },
   { value: "corners", label: "Most corners" },

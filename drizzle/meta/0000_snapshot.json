@@ -1,9 +1,71 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f01b7924-e5d6-4ae2-8715-246c13ced319",
+  "id": "55142c04-6d83-4b8a-b2fe-8a88f3c8dc2a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "route_daily_stats": {
+      "name": "route_daily_stats",
+      "columns": {
+        "route_id": {
+          "name": "route_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "day": {
+          "name": "day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "views": {
+          "name": "views",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "copies": {
+          "name": "copies",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "route_daily_stats_route_id_routes_id_fk": {
+          "name": "route_daily_stats_route_id_routes_id_fk",
+          "tableFrom": "route_daily_stats",
+          "tableTo": "routes",
+          "columnsFrom": [
+            "route_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "route_daily_stats_route_id_day_pk": {
+          "columns": [
+            "route_id",
+            "day"
+          ],
+          "name": "route_daily_stats_route_id_day_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "route_images": {
       "name": "route_images",
       "columns": {
@@ -127,6 +189,80 @@
             "tag"
           ],
           "name": "route_tags_route_id_tag_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "route_votes": {
+      "name": "route_votes",
+      "columns": {
+        "route_id": {
+          "name": "route_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "route_votes_route_id_routes_id_fk": {
+          "name": "route_votes_route_id_routes_id_fk",
+          "tableFrom": "route_votes",
+          "tableTo": "routes",
+          "columnsFrom": [
+            "route_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "route_votes_user_id_users_id_fk": {
+          "name": "route_votes_user_id_users_id_fk",
+          "tableFrom": "route_votes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "route_votes_route_id_user_id_pk": {
+          "columns": [
+            "route_id",
+            "user_id"
+          ],
+          "name": "route_votes_route_id_user_id_pk"
         }
       },
       "uniqueConstraints": {},
@@ -334,9 +470,41 @@
           "notNull": true,
           "autoincrement": false
         },
+        "view_count": {
+          "name": "view_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
         "copy_count": {
           "name": "copy_count",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "like_count": {
+          "name": "like_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "dislike_count": {
+          "name": "dislike_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "rating_score": {
+          "name": "rating_score",
+          "type": "real",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -392,6 +560,13 @@
           "name": "routes_distance_idx",
           "columns": [
             "distance_m"
+          ],
+          "isUnique": false
+        },
+        "routes_rating_idx": {
+          "name": "routes_rating_idx",
+          "columns": [
+            "rating_score"
           ],
           "isUnique": false
         }

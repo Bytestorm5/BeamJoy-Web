@@ -1,16 +1,13 @@
 import "server-only";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { del, put } from "@vercel/blob";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { nanoid } from "nanoid";
 
 /**
- * Screenshot storage. With BLOB_READ_WRITE_TOKEN set, files go to Vercel Blob (what a Vercel
- * deployment needs, since its filesystem is read-only); otherwise they're written to
- * UPLOAD_DIR (default `.data/uploads`) and served by app/uploads/[...key]/route.ts.
+ * Screenshots live in the SCREENSHOTS R2 bucket and are served by app/uploads/[...key]/route.ts.
+ * Set SCREENSHOTS_PUBLIC_URL (an r2.dev or custom domain on that bucket) to link to R2 directly
+ * instead of going through the Worker.
  */
-const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
-const uploadDir = path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR ?? ".data/uploads");
+const bucket = () => getCloudflareContext().env.SCREENSHOTS;
 
 export const IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -29,49 +26,28 @@ export function sniffImageType(buf: Uint8Array): string | null {
   return null;
 }
 
+function publicUrl(key: string) {
+  const base = process.env.SCREENSHOTS_PUBLIC_URL?.replace(/\/+$/, "");
+  return base ? `${base}/${key}` : `/uploads/${key}`;
+}
+
 export async function storeImage(
   routeId: string,
   bytes: Uint8Array,
   type: string,
 ): Promise<{ url: string; storageKey: string }> {
   const key = `routes/${routeId}/${nanoid(12)}.${IMAGE_TYPES[type]}`;
-  if (useBlob) {
-    const blob = await put(key, Buffer.from(bytes), {
-      access: "public",
-      contentType: type,
-      addRandomSuffix: false,
-    });
-    return { url: blob.url, storageKey: blob.url };
-  }
-  const file = path.join(/*turbopackIgnore: true*/ uploadDir, key);
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, bytes);
-  return { url: `/uploads/${key}`, storageKey: key };
+  await bucket().put(key, bytes, {
+    httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" },
+  });
+  return { url: publicUrl(key), storageKey: key };
 }
 
-export async function deleteImage(storageKey: string) {
-  try {
-    if (storageKey.startsWith("https://")) await del(storageKey);
-    else await unlink(resolveLocal(storageKey));
-  } catch {
-    // Already gone: nothing to clean up.
-  }
+export async function deleteImages(storageKeys: string[]) {
+  if (storageKeys.length) await bucket().delete(storageKeys);
 }
 
-function resolveLocal(key: string) {
-  const file = path.resolve(/*turbopackIgnore: true*/ uploadDir, key);
-  if (!file.startsWith(uploadDir + path.sep)) throw new Error("Invalid upload path");
-  return file;
-}
-
-export async function readLocalUpload(key: string) {
-  const file = resolveLocal(key);
-  const ext = path.extname(file).slice(1);
-  const type = Object.entries(IMAGE_TYPES).find(([, e]) => e === ext)?.[0];
-  if (!type) return null;
-  try {
-    return { bytes: await readFile(/*turbopackIgnore: true*/ file), type };
-  } catch {
-    return null;
-  }
+export async function readUpload(key: string) {
+  if (!/^routes\/[\w-]+\/[\w-]+\.(jpg|png|webp|avif)$/.test(key)) return null;
+  return bucket().get(key);
 }

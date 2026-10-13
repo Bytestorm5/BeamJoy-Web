@@ -1,32 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { Pagination } from "@/components/pagination";
 import { RouteCard } from "@/components/route-card";
 import { parseFilters } from "@/lib/filters";
 import { pluralize } from "@/lib/format";
 import { getUser, searchRoutes } from "@/lib/queries";
 
-export default function UserPage({ params, searchParams }: PageProps<"/u/[id]">) {
+export default async function UserPage({ params, searchParams }: PageProps<"/u/[id]">) {
+  const id = decodeURIComponent((await params).id);
+  const user = await getUser(id);
+  if (!user) notFound();
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-surface" />}>
-        <UserRoutes params={params} searchParams={searchParams} />
-      </Suspense>
+      <UserRoutes id={id} user={user} searchParams={searchParams} />
     </div>
   );
 }
 
 async function UserRoutes({
-  params,
+  id,
+  user,
   searchParams,
 }: {
-  params: PageProps<"/u/[id]">["params"];
+  id: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUser>>>;
   searchParams: PageProps<"/u/[id]">["searchParams"];
 }) {
-  const id = decodeURIComponent((await params).id);
-  const user = await getUser(id);
-  if (!user) notFound();
   const filters = { ...parseFilters(await searchParams), author: id };
   const result = await searchRoutes(filters);
   const base = `/u/${encodeURIComponent(id)}`;

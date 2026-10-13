@@ -1,16 +1,15 @@
 import "server-only";
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";
 
-// Local dev uses a SQLite file; production points DATABASE_URL at a libSQL/Turso database.
-const url = process.env.DATABASE_URL ?? "file:.data/beamjoy.db";
+/**
+ * The request's D1 database. Bindings only exist inside a request on Workers (and in `next dev`
+ * via initOpenNextCloudflareForDev), so this is called per use rather than held in a module global.
+ */
+export function getDb() {
+  return drizzle(getCloudflareContext().env.DB, { schema });
+}
 
-const globalForDb = globalThis as unknown as { __bjClient?: ReturnType<typeof createClient> };
-const client =
-  globalForDb.__bjClient ??
-  createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN || undefined });
-if (process.env.NODE_ENV !== "production") globalForDb.__bjClient = client;
-
-export const db = drizzle(client, { schema });
+export type Db = ReturnType<typeof getDb>;
 export { schema };

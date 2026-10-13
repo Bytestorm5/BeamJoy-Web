@@ -1,10 +1,11 @@
 import "server-only";
 import { and, asc, count, desc, eq, exists, gte, inArray, like, lte, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
-import { db, schema } from "@/db";
+import { getDb, schema } from "@/db";
 import { PAGE_SIZE } from "./constants";
+import { fillDays, utcDay } from "./metrics";
 import type { Filters } from "./filters";
 
-const { routes, routeTags, routeImages, users } = schema;
+const { routes, routeTags, routeImages, users, routeDailyStats, routeVotes } = schema;
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
@@ -19,7 +20,7 @@ function whereFor(f: Filters): SQL | undefined {
         likeEsc(routes.description),
         likeEsc(routes.mapName),
         exists(
-          db
+          getDb()
             .select({ one: sql`1` })
             .from(routeTags)
             .where(and(eq(routeTags.routeId, routes.id), like(routeTags.tag, f.q.toLowerCase()))),
@@ -42,7 +43,7 @@ function whereFor(f: Filters): SQL | undefined {
   if (f.tag) {
     c.push(
       exists(
-        db
+        getDb()
           .select({ one: sql`1` })
           .from(routeTags)
           .where(and(eq(routeTags.routeId, routes.id), eq(routeTags.tag, f.tag))),
@@ -54,7 +55,9 @@ function whereFor(f: Filters): SQL | undefined {
 
 const ORDER = {
   new: [desc(routes.createdAt)],
+  top: [desc(routes.ratingScore), desc(routes.likeCount), desc(routes.createdAt)],
   popular: [desc(routes.copyCount), desc(routes.createdAt)],
+  viewed: [desc(routes.viewCount), desc(routes.createdAt)],
   longest: [desc(routes.distanceM), desc(routes.createdAt)],
   shortest: [asc(routes.distanceM), desc(routes.createdAt)],
   corners: [desc(routes.corners), desc(routes.createdAt)],
@@ -73,6 +76,9 @@ export const cardColumns = {
   loopable: routes.loopable,
   branching: routes.branching,
   copyCount: routes.copyCount,
+  viewCount: routes.viewCount,
+  likeCount: routes.likeCount,
+  dislikeCount: routes.dislikeCount,
   coverUrl: routes.coverUrl,
   geometry: routes.geometry,
   createdAt: routes.createdAt,
@@ -84,7 +90,7 @@ export type RouteCard = Awaited<ReturnType<typeof searchRoutes>>["items"][number
 export async function searchRoutes(f: Filters) {
   const where = whereFor(f);
   const [items, [{ total }]] = await Promise.all([
-    db
+    getDb()
       .select(cardColumns)
       .from(routes)
       .innerJoin(users, eq(users.id, routes.authorId))
@@ -92,14 +98,14 @@ export async function searchRoutes(f: Filters) {
       .orderBy(...ORDER[f.sort])
       .limit(PAGE_SIZE)
       .offset((f.page - 1) * PAGE_SIZE),
-    db.select({ total: count() }).from(routes).where(where),
+    getDb().select({ total: count() }).from(routes).where(where),
   ]);
   return { items, total, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
 }
 
 /** Every map with at least one route, most-used first. */
 export async function mapFacets() {
-  return db
+  return getDb()
     .select({
       key: routes.mapKey,
       name: sql<string>`max(${routes.mapName})`,
@@ -113,7 +119,7 @@ export async function mapFacets() {
 }
 
 export async function popularTags(limit = 16) {
-  return db
+  return getDb()
     .select({ tag: routeTags.tag, n: count() })
     .from(routeTags)
     .groupBy(routeTags.tag)
@@ -122,7 +128,7 @@ export async function popularTags(limit = 16) {
 }
 
 export async function getRoute(id: string) {
-  const [row] = await db
+  const [row] = await getDb()
     .select({ route: routes, author: { id: users.id, name: users.name, image: users.image } })
     .from(routes)
     .innerJoin(users, eq(users.id, routes.authorId))
@@ -130,8 +136,8 @@ export async function getRoute(id: string) {
     .limit(1);
   if (!row) return null;
   const [images, tags] = await Promise.all([
-    db.select().from(routeImages).where(eq(routeImages.routeId, id)).orderBy(asc(routeImages.position)),
-    db.select({ tag: routeTags.tag }).from(routeTags).where(eq(routeTags.routeId, id)).orderBy(asc(routeTags.tag)),
+    getDb().select().from(routeImages).where(eq(routeImages.routeId, id)).orderBy(asc(routeImages.position)),
+    getDb().select({ tag: routeTags.tag }).from(routeTags).where(eq(routeTags.routeId, id)).orderBy(asc(routeTags.tag)),
   ]);
   return { ...row.route, author: row.author, images, tags: tags.map((t) => t.tag) };
 }
@@ -139,12 +145,12 @@ export async function getRoute(id: string) {
 export type RouteDetail = NonNullable<Awaited<ReturnType<typeof getRoute>>>;
 
 export async function getUser(id: string) {
-  const [u] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const [u] = await getDb().select().from(users).where(eq(users.id, id)).limit(1);
   return u ?? null;
 }
 
 export async function siteTotals() {
-  const [row] = await db
+  const [row] = await getDb()
     .select({
       routes: count(),
       maps: sql<number>`count(distinct ${routes.mapKey})`,
@@ -163,7 +169,7 @@ export async function listModMaps(q: string, page: number) {
     q ? sql`${routes.mapName} like ${`%${escapeLike(q)}%`} escape '\\'` : undefined,
   );
   const [items, [{ total }]] = await Promise.all([
-    db
+    getDb()
       .select({
         key: routes.mapKey,
         name: sql<string>`max(${routes.mapName})`,
@@ -177,16 +183,37 @@ export async function listModMaps(q: string, page: number) {
       .orderBy(desc(count()), asc(sql`max(${routes.mapName})`))
       .limit(MAPS_PAGE_SIZE)
       .offset((page - 1) * MAPS_PAGE_SIZE),
-    db.select({ total: sql<number>`count(distinct ${routes.mapKey})` }).from(routes).where(where),
+    getDb().select({ total: sql<number>`count(distinct ${routes.mapKey})` }).from(routes).where(where),
   ]);
   return { items, total, pages: Math.max(1, Math.ceil(total / MAPS_PAGE_SIZE)) };
 }
 
 export async function vanillaMapCounts() {
-  const rows = await db
+  const rows = await getDb()
     .select({ key: routes.mapKey, routes: count() })
     .from(routes)
     .where(eq(routes.mapKind, "vanilla"))
     .groupBy(routes.mapKey);
   return Object.fromEntries(rows.map((r) => [r.key, r.routes])) as Record<string, number>;
+}
+
+export type DailyPoint = { day: string; views: number; copies: number };
+
+/** Daily views and downloads for the last `days` UTC days, zero-filled. */
+export async function routeActivity(routeId: string, days = 30): Promise<DailyPoint[]> {
+  const since = utcDay(new Date(Date.now() - (days - 1) * 86_400_000));
+  const rows = await getDb()
+    .select({ day: routeDailyStats.day, views: routeDailyStats.views, copies: routeDailyStats.copies })
+    .from(routeDailyStats)
+    .where(and(eq(routeDailyStats.routeId, routeId), gte(routeDailyStats.day, since)));
+  return fillDays(rows, days, (day) => ({ day, views: 0, copies: 0 }));
+}
+
+export async function myVote(routeId: string, userId: string): Promise<-1 | 0 | 1> {
+  const [row] = await getDb()
+    .select({ value: routeVotes.value })
+    .from(routeVotes)
+    .where(and(eq(routeVotes.routeId, routeId), eq(routeVotes.userId, userId)))
+    .limit(1);
+  return row?.value === 1 ? 1 : row?.value === -1 ? -1 : 0;
 }

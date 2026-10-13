@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { recordCopy } from "@/app/actions";
+import { trackRouteEvent } from "@/app/actions";
 
 export function CopyCode({ routeId, code }: { routeId: string; code: string }) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
@@ -10,7 +10,7 @@ export function CopyCode({ routeId, code }: { routeId: string; code: string }) {
     try {
       await navigator.clipboard.writeText(code);
       setState("copied");
-      recordCopy(routeId).catch(() => {});
+      trackRouteEvent(routeId, "copy").catch(() => {});
     } catch {
       setState("failed");
     }

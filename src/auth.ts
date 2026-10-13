@@ -3,8 +3,7 @@ import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
 import GitHub from "next-auth/providers/github";
-import { connection } from "next/server";
-import { db, schema } from "@/db";
+import { getDb, schema } from "@/db";
 
 declare module "next-auth" {
   interface Session {
@@ -52,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const id = `${account.provider}:${account.providerAccountId}`;
         const name = (user?.name || "Driver").slice(0, 60);
         const image = user?.image ?? null;
-        await db
+        await getDb()
           .insert(schema.users)
           .values({ id, name, image })
           .onConflictDoUpdate({ target: schema.users.id, set: { name, image } });
@@ -69,9 +68,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 
 export async function currentUser() {
-  // Auth.js touches crypto before it reads the cookie; mark the read as request-time first so
-  // Cache Components doesn't treat it as an unstable value during prerendering.
-  await connection();
   const session = await auth();
   return session?.user?.id ? session.user : null;
 }

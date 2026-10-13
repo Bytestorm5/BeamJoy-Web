@@ -57,7 +57,14 @@ export const routes = sqliteTable(
     /** JSON RouteGeometry, used to draw previews without re-decoding the code. */
     geometry: text("geometry").notNull(),
 
+    // Engagement totals, denormalized for cards and sorting. Daily history is in routeDailyStats.
+    viewCount: integer("view_count").notNull().default(0),
+    /** Share-code copies: what the site calls a "download". */
     copyCount: integer("copy_count").notNull().default(0),
+    likeCount: integer("like_count").notNull().default(0),
+    dislikeCount: integer("dislike_count").notNull().default(0),
+    /** Wilson lower bound of the like ratio; what "Top rated" sorts by. */
+    ratingScore: real("rating_score").notNull().default(0),
     /** Denormalized for cards; first image by position. */
     coverUrl: text("cover_url"),
     createdAt: createdAt(),
@@ -70,6 +77,7 @@ export const routes = sqliteTable(
     index("routes_author_idx").on(t.authorId),
     index("routes_created_idx").on(t.createdAt),
     index("routes_distance_idx").on(t.distanceM),
+    index("routes_rating_idx").on(t.ratingScore),
   ],
 );
 
@@ -98,6 +106,37 @@ export const routeTags = sqliteTable(
     tag: text("tag").notNull(),
   },
   (t) => [primaryKey({ columns: [t.routeId, t.tag] }), index("route_tags_tag_idx").on(t.tag)],
+);
+
+/** Per-route, per-UTC-day counters for the "over time" charts. */
+export const routeDailyStats = sqliteTable(
+  "route_daily_stats",
+  {
+    routeId: text("route_id")
+      .notNull()
+      .references(() => routes.id, { onDelete: "cascade" }),
+    /** YYYY-MM-DD, UTC. */
+    day: text("day").notNull(),
+    views: integer("views").notNull().default(0),
+    copies: integer("copies").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.routeId, t.day] })],
+);
+
+export const routeVotes = sqliteTable(
+  "route_votes",
+  {
+    routeId: text("route_id")
+      .notNull()
+      .references(() => routes.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** 1 = like, -1 = dislike. */
+    value: integer("value").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.routeId, t.userId] })],
 );
 
 export type Route = typeof routes.$inferSelect;

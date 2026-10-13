@@ -5,16 +5,21 @@
  *
  *   git clone --depth 1 https://github.com/foodcache3/BeamJoy-Revived ../BeamJoy-Revived
  *   npm run db:seed -- ../BeamJoy-Revived
+ *
+ * Writes to the local D1 database that `next dev` uses (via wrangler's platform proxy), and adds
+ * some synthetic views/downloads/votes so the metrics UI has something to show. Dev only.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { drizzle } from "drizzle-orm/d1";
+import { getPlatformProxy } from "wrangler";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as schema from "../src/db/schema.ts";
 import { analyzeRace } from "../src/lib/sharecode/analyze.ts";
 import { decodeShareCode, encodeRaceShareCode } from "../src/lib/sharecode/codec.ts";
 import { VANILLA_MAP_BY_LEVEL } from "../src/lib/constants.ts";
+import { utcDay, wilsonScore } from "../src/lib/metrics.ts";
 
 const repo = process.argv[2];
 if (!repo) {
@@ -23,16 +28,12 @@ if (!repo) {
 }
 const dir = path.join(repo, "BeamJoyServer/bundledContent/activities");
 
-const db = drizzle(
-  createClient({
-    url: process.env.DATABASE_URL ?? "file:.data/beamjoy.db",
-    authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
-  }),
-  { schema },
-);
+const proxy = await getPlatformProxy<CloudflareEnv>();
+const db = drizzle(proxy.env.DB, { schema });
 
 const author = { id: "seed:beamjoy", name: "BeamJoy bundled" };
-await db.insert(schema.users).values(author).onConflictDoNothing();
+const voters = Array.from({ length: 12 }, (_, i) => ({ id: `seed:voter${i}`, name: `Seed voter ${i + 1}` }));
+await db.insert(schema.users).values([author, ...voters]).onConflictDoNothing();
 
 const guessSurface = (name: string) => {
   const n = name.toLowerCase();
@@ -104,13 +105,45 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith("_races.json")).sor
       elevationGainM: s.elevationGainM,
       elevationRangeM: s.elevationRangeM,
       geometry: JSON.stringify(geometry),
-      copyCount: Math.floor(Math.random() * 60),
       createdAt: new Date(t),
       updatedAt: new Date(t),
     });
     const tags = guessTags(race.name, s.loopable);
     if (tags.length) await db.insert(schema.routeTags).values(tags.map((tag) => ({ routeId: id, tag })));
+    await seedMetrics(id, new Date(t));
     inserted++;
   }
 }
-console.log(`Seeded ${inserted} routes.`);
+console.log(`Seeded ${inserted} routes into local D1.`);
+await proxy.dispose();
+
+/** Synthetic engagement: a popularity-weighted random walk of daily views/downloads, plus votes. */
+async function seedMetrics(routeId: string, created: Date) {
+  const pop = Math.random() ** 2 * 40;
+  const days: { routeId: string; day: string; views: number; copies: number }[] = [];
+  for (let d = new Date(created); d <= new Date(); d = new Date(d.getTime() + 86_400_000)) {
+    const views = Math.max(0, Math.round(pop * (0.4 + Math.random())));
+    if (!views) continue;
+    days.push({ routeId, day: utcDay(d), views, copies: Math.round(views * Math.random() * 0.35) });
+  }
+  // D1 caps bound parameters per statement, so insert in chunks.
+  for (let i = 0; i < days.length; i += 20) await db.insert(schema.routeDailyStats).values(days.slice(i, i + 20));
+  const votes = voters.filter(() => Math.random() < pop / 50).map((v) => ({
+    routeId,
+    userId: v.id,
+    value: Math.random() < 0.8 ? 1 : -1,
+  }));
+  if (votes.length) await db.insert(schema.routeVotes).values(votes);
+  const likes = votes.filter((v) => v.value === 1).length;
+  const dislikes = votes.length - likes;
+  await db
+    .update(schema.routes)
+    .set({
+      viewCount: days.reduce((a, d) => a + d.views, 0),
+      copyCount: days.reduce((a, d) => a + d.copies, 0),
+      likeCount: likes,
+      dislikeCount: dislikes,
+      ratingScore: wilsonScore(likes, dislikes),
+    })
+    .where(eq(schema.routes.id, routeId));
+}

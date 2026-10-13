@@ -1,3 +1,12 @@
+CREATE TABLE `route_daily_stats` (
+	`route_id` text NOT NULL,
+	`day` text NOT NULL,
+	`views` integer DEFAULT 0 NOT NULL,
+	`copies` integer DEFAULT 0 NOT NULL,
+	PRIMARY KEY(`route_id`, `day`),
+	FOREIGN KEY (`route_id`) REFERENCES `routes`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `route_images` (
 	`id` text PRIMARY KEY NOT NULL,
 	`route_id` text NOT NULL,
@@ -17,6 +26,16 @@ CREATE TABLE `route_tags` (
 );
 --> statement-breakpoint
 CREATE INDEX `route_tags_tag_idx` ON `route_tags` (`tag`);--> statement-breakpoint
+CREATE TABLE `route_votes` (
+	`route_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`value` integer NOT NULL,
+	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	PRIMARY KEY(`route_id`, `user_id`),
+	FOREIGN KEY (`route_id`) REFERENCES `routes`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `routes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL,
@@ -46,7 +65,11 @@ CREATE TABLE `routes` (
 	`elevation_gain_m` integer NOT NULL,
 	`elevation_range_m` integer NOT NULL,
 	`geometry` text NOT NULL,
+	`view_count` integer DEFAULT 0 NOT NULL,
 	`copy_count` integer DEFAULT 0 NOT NULL,
+	`like_count` integer DEFAULT 0 NOT NULL,
+	`dislike_count` integer DEFAULT 0 NOT NULL,
+	`rating_score` real DEFAULT 0 NOT NULL,
 	`cover_url` text,
 	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
@@ -57,6 +80,7 @@ CREATE INDEX `routes_map_idx` ON `routes` (`map_key`);--> statement-breakpoint
 CREATE INDEX `routes_author_idx` ON `routes` (`author_id`);--> statement-breakpoint
 CREATE INDEX `routes_created_idx` ON `routes` (`created_at`);--> statement-breakpoint
 CREATE INDEX `routes_distance_idx` ON `routes` (`distance_m`);--> statement-breakpoint
+CREATE INDEX `routes_rating_idx` ON `routes` (`rating_score`);--> statement-breakpoint
 CREATE TABLE `users` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,

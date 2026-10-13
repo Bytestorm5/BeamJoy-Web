@@ -1,16 +1,15 @@
-import { readLocalUpload } from "@/lib/storage";
+import { readUpload } from "@/lib/storage";
 
-// Serves locally stored screenshots (only used when Vercel Blob isn't configured).
+// Serves screenshots out of R2 (unless SCREENSHOTS_PUBLIC_URL points straight at the bucket).
 export async function GET(_req: Request, ctx: RouteContext<"/uploads/[...key]">) {
   const { key } = await ctx.params;
-  const file = await readLocalUpload(key.join("/"));
-  if (!file) return new Response("Not found", { status: 404 });
-  return new Response(new Uint8Array(file.bytes), {
-    headers: {
-      "Content-Type": file.type,
-      // Keys are random and never rewritten, so the bytes behind a URL never change.
-      "Cache-Control": "public, max-age=31536000, immutable",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  const obj = await readUpload(key.join("/"));
+  if (!obj) return new Response("Not found", { status: 404 });
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set("ETag", obj.httpEtag);
+  // Keys are random and never rewritten, so the bytes behind a URL never change.
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  headers.set("X-Content-Type-Options", "nosniff");
+  return new Response(obj.body, { headers });
 }
