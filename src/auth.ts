@@ -17,8 +17,12 @@ export const devLoginEnabled =
 
 const providers: Provider[] = [];
 // BeamMP's community lives on Discord, so it's the only real sign-in. It turns on once
-// AUTH_DISCORD_ID and AUTH_DISCORD_SECRET are set.
-if (process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET) providers.push(Discord);
+// AUTH_DISCORD_ID and AUTH_DISCORD_SECRET are set. Discord sends `iss` on its redirect
+// (RFC 9207), which Auth.js checks against the provider's issuer, and the built-in provider
+// doesn't set one.
+if (process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET) {
+  providers.push(Discord({ issuer: "https://discord.com" }));
+}
 if (devLoginEnabled) {
   providers.push(
     Credentials({
