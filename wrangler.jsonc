@@ -7,6 +7,12 @@
   // Secrets and vars set in the Cloudflare dashboard (AUTH_SECRET, OAuth credentials,
   // ADMIN_USER_IDS, ...) survive `wrangler deploy` instead of being wiped.
   "keep_vars": true,
+  // Non-secret config only. Secrets (AUTH_SECRET, AUTH_DISCORD_ID/SECRET) are set in the dashboard
+  // or with `wrangler secret put`.
+  "vars": {
+    // Auth.js only trusts the request host on Vercel by default.
+    "AUTH_TRUST_HOST": "true"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
