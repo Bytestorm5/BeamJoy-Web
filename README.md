@@ -97,10 +97,19 @@ npm run db:migrate:remote
 npx wrangler secret put AUTH_SECRET                # plus AUTH_DISCORD_ID / AUTH_DISCORD_SECRET
 ```
 
-Then `npm run deploy` (or connect the repo to Workers Builds with `npx opennextjs-cloudflare build`
-as the build command and `npx opennextjs-cloudflare deploy` as the deploy command). `keep_vars`
-is on in `wrangler.jsonc`, so variables and secrets set in the dashboard survive deploys. Run
-`npm run db:migrate:remote` whenever a new migration lands.
+Then either run `npm run deploy` locally, or connect the repo to **Workers Builds** with:
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+
+`npm run build` runs `next build` and then, as `postbuild`, `opennextjs-cloudflare build
+--skipNextBuild` (from the `output: "standalone"` build), so it always leaves a deployable
+`.open-next/`. `wrangler deploy` detects the OpenNext project and hands off to
+`opennextjs-cloudflare deploy`, which needs that compiled output. A plain `next build` without the
+postbuild step fails there with "Could not find compiled Open Next config".
+
+`keep_vars` is on in `wrangler.jsonc`, so variables and secrets set in the dashboard survive
+deploys. Run `npm run db:migrate:remote` whenever a new migration lands.
 
 OAuth callback URLs are `<site>/api/auth/callback/<provider>`.
 
@@ -108,6 +117,9 @@ Notes:
 
 - Next.js is pinned to 16.3.x: OpenNext's Cloudflare adapter (1.20.11) doesn't yet load the
   `preview-props.json` manifest that Next 16.4 added, so a 16.4 build crashes on Workers.
+- Links prefetch on hover, and every dynamic route has a `loading.tsx`, so a prefetch renders only
+  the layout and skeleton and never touches D1. The flip side of streaming is that a missing route
+  renders "Page not found" (with `noindex`) under a 200 status instead of a 404.
 - Cache Components (partial prerendering) is off. It hangs in the Workers runtime, and every page
   here reads D1 or the session per request anyway. Prerendered output is served from static
   assets (`open-next.config.ts`), so no cache bucket is needed.

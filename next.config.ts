@@ -5,6 +5,9 @@ import type { NextConfig } from "next";
 // (Next warns that workerd's setTimeout can't support it). Pages render per request instead,
 // which every page here does anyway since they all read D1 or the session.
 const nextConfig: NextConfig = {
+  // The `postbuild` step (`opennextjs-cloudflare build --skipNextBuild`) bundles the Worker
+  // from the standalone output, so `npm run build` alone produces a deployable .open-next/.
+  output: "standalone",
   experimental: {
     serverActions: {
       // Screenshots are downscaled in the browser before upload, so this is a generous ceiling.
