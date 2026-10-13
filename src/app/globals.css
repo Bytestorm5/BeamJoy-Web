@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/* Theme tokens. Dark is the default look (it suits screenshots of a driving game); light mode
+   is a real, separately chosen palette rather than an automatic inversion. */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eef0f3;
+  --border: #dde1e7;
+  --border-strong: #c3c9d2;
+  --text: #13171c;
+  --text-2: #3d4652;
+  --muted: #677283;
+  --accent: #e35d00;
+  --accent-hover: #c94f00;
+  --accent-ink: #ffffff;
+  --accent-soft: #fff0e5;
+  --circuit: #0f8a7e;
+  --sprint: #7a4fd6;
+  --danger: #c62f2f;
+  --route-line: #e35d00;
+  --route-branch: #9aa3af;
+  --chart-grid: #e5e8ed;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0e11;
+    --surface: #14181d;
+    --surface-2: #1b2027;
+    --border: #262d36;
+    --border-strong: #36404c;
+    --text: #e9edf2;
+    --text-2: #c0c8d2;
+    --muted: #8c97a6;
+    --accent: #ff7a1a;
+    --accent-hover: #ff8f3d;
+    --accent-ink: #1c0c00;
+    --accent-soft: #2a1a0e;
+    --circuit: #2cc8b5;
+    --sprint: #a98bff;
+    --danger: #ff6b6b;
+    --route-line: #ff8a33;
+    --route-branch: #4d5866;
+    --chart-grid: #222932;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-circuit: var(--circuit);
+  --color-sprint: var(--sprint);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Shared control styles. Declared as utilities so they can be composed with @apply. */
+@utility field {
+  @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted;
+  @apply focus:border-accent focus:ring-2 focus:ring-accent/30 focus:outline-none;
+}
+@utility label {
+  @apply mb-1.5 block text-xs font-semibold tracking-wide text-text-2 uppercase;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors;
+  @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-accent-ink hover:bg-accent-hover;
+}
+@utility btn-secondary {
+  @apply btn border border-border bg-surface text-text hover:border-border-strong hover:bg-surface-2;
+}
+@utility btn-ghost {
+  @apply btn text-text-2 hover:bg-surface-2 hover:text-text;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-text-2;
+}

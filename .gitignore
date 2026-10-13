@@ -147,3 +147,9 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local database and uploaded screenshots
+.data/
+
+# Next.js
+next-env.d.ts
