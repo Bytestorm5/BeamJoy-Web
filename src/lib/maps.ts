@@ -18,6 +18,3 @@ export function modMapSlug(name: string) {
   const s = slugify(name) || "map";
   return BY_SLUG.has(s) ? `${s}-mod` : s;
 }
-
-export const mapPath = (slug: string) => `/maps/${slug}`;
-export const routePath = (slug: string) => `/routes/${slug}`;

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { currentUser, isAdmin } from "@/auth";
+import { cache } from "react";
+import { getViewer, requireReadRoutes, routeControls } from "@/lib/access";
 import { CopyCode } from "@/components/copy-code";
 import { DeleteRouteButton } from "@/components/delete-route";
 import { ElevationProfile } from "@/components/elevation-profile";
@@ -11,7 +12,7 @@ import { LayoutBadge } from "@/components/route-card";
 import { RouteMap } from "@/components/route-map";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDate, formatDistance } from "@/lib/format";
-import { mapPath, routePath } from "@/lib/maps";
+import { mapPath, routePath, userPath } from "@/lib/paths";
 import { getRoute, myVote, routeActivity, type RouteDetail } from "@/lib/queries";
 import { ActivityChart } from "@/components/activity-chart";
 import { RatingButtons } from "@/components/rating";
@@ -30,8 +31,9 @@ export async function generateMetadata({ params }: PageProps<"/routes/[slug]">):
 }
 
 export default async function RoutePage({ params }: PageProps<"/routes/[slug]">) {
-  const route = await getRoute((await params).slug);
+  const [route, viewer] = await Promise.all([getRoute((await params).slug), getViewer()]);
   if (!route) notFound();
+  await requireReadRoutes(viewer);
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <RouteView route={route} />
@@ -80,7 +82,7 @@ async function RouteView({ route }: { route: RouteDetail }) {
           </h1>
           <p className="mt-1 text-text-2">
             by{" "}
-            <Link href={`/u/${encodeURIComponent(route.author.id)}`} className="font-medium text-text hover:underline">
+            <Link href={userPath(route.author.slug)} className="font-medium text-text hover:underline">
               {route.author.name}
             </Link>{" "}
             · {formatDate(route.createdAt)}
@@ -293,29 +295,34 @@ function MapLegend({ loop, branching }: { loop: boolean; branching: boolean }) {
   );
 }
 
+/** The viewer's controls for this route, shared by the header and the rating row. */
+const controlsFor = cache(async (id: string, authorId: string) => routeControls(await getViewer(), { id, authorId }));
+
 async function OwnerActions({ route }: { route: RouteDetail }) {
-  const user = await currentUser();
-  if (!user || (user.id !== route.authorId && !isAdmin(user.id))) return null;
+  const can = await controlsFor(route.id, route.authorId);
+  if (!can.edit && !can.delete) return null;
   return (
     <div className="flex gap-2">
-      <Link href={`${routePath(route.slug)}/edit`} className="btn-secondary">
-        Edit
-      </Link>
-      <DeleteRouteButton slug={route.slug} title={route.title} />
+      {can.edit && (
+        <Link href={`${routePath(route.slug)}/edit`} className="btn-secondary">
+          Edit
+        </Link>
+      )}
+      {can.delete && <DeleteRouteButton slug={route.slug} title={route.title} />}
     </div>
   );
 }
 
 async function Rating({ route }: { route: RouteDetail }) {
-  const user = await currentUser();
-  const mine = user ? await myVote(route.id, user.id) : 0;
+  const [viewer, can] = await Promise.all([getViewer(), controlsFor(route.id, route.authorId)]);
+  const mine = viewer.user && can.rate ? await myVote(route.id, viewer.user.id) : 0;
   return (
     <RatingButtons
       slug={route.slug}
       likes={route.likeCount}
       dislikes={route.dislikeCount}
       myVote={mine}
-      viewer={!user ? "signed-out" : user.id === route.authorId ? "author" : "voter"}
+      viewer={!viewer.user ? "signed-out" : can.rate ? "voter" : viewer.user.id === route.authorId ? "author" : "denied"}
     />
   );
 }

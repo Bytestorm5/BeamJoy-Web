@@ -1,0 +1,12 @@
+{
+  "catalog": "alfiz-catalog.json",
+  "include": ["src"],
+  "gateNames": [
+    "requireReadRoutes",
+    "requireCreateRoute",
+    "requireUpdateRoute",
+    "requireDeleteRoute",
+    "requireRateRoute",
+    "requireRecordActivity"
+  ]
+}

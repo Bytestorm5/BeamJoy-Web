@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/components/link";
 import { Suspense } from "react";
 import { createRoute } from "@/app/actions";
-import { currentUser } from "@/auth";
+import { getViewer, isAccessDenied, requireCreateRoute } from "@/lib/access";
 import { RouteForm } from "@/components/route-form";
 
 export const metadata: Metadata = { title: "Share a route" };
@@ -20,14 +20,21 @@ export default function SubmitPage() {
 }
 
 async function Gate() {
-  const user = await currentUser();
-  if (!user) {
+  try {
+    await requireCreateRoute(await getViewer());
+  } catch (e) {
+    if (!isAccessDenied(e)) throw e;
+    const signedOut = e.reason === "unauthenticated";
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
-        <p className="font-display text-2xl font-semibold uppercase">Sign in to share</p>
-        <Link href="/signin?callbackUrl=/submit" className="btn-primary mt-6">
-          Sign in
-        </Link>
+        <p className="font-display text-2xl font-semibold uppercase">
+          {signedOut ? "Sign in to share" : "You can't share routes"}
+        </p>
+        {signedOut && (
+          <Link href="/signin?callbackUrl=/submit" className="btn-primary mt-6">
+            Sign in
+          </Link>
+        )}
       </div>
     );
   }

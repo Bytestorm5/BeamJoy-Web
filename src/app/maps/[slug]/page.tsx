@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Catalog, CatalogSkeleton } from "@/components/catalog";
 import Link from "@/components/link";
-import { mapPath } from "@/lib/maps";
+import { mapPath } from "@/lib/paths";
 import { getMap } from "@/lib/queries";
 
 export async function generateMetadata({ params }: PageProps<"/maps/[slug]">): Promise<Metadata> {

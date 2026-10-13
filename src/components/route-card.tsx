@@ -3,7 +3,7 @@ import type { RouteGeometry } from "@/lib/sharecode/analyze";
 import type { RouteCard as RouteCardData } from "@/lib/queries";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDistance } from "@/lib/format";
-import { routePath } from "@/lib/maps";
+import { routePath } from "@/lib/paths";
 import { RouteMap } from "./route-map";
 
 export function LayoutBadge({ loopable, branching }: { loopable: boolean; branching?: boolean }) {

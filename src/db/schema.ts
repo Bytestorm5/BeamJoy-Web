@@ -9,6 +9,8 @@ const createdAt = () =>
 export const users = sqliteTable("users", {
   /** `<provider>:<providerAccountId>`, e.g. `discord:1234`. */
   id: text("id").primaryKey(),
+  /** Public URL key (/u/<slug>). Set once from the first display name. */
+  slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   image: text("image"),
   createdAt: createdAt(),

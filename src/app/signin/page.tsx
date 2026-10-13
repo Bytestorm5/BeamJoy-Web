@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { signInWith } from "@/app/actions";
+import { signInWith } from "@/app/auth-actions";
 import { devLoginEnabled, providerList } from "@/auth";
 
 export const metadata: Metadata = { title: "Sign in" };

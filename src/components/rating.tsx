@@ -9,7 +9,7 @@ type Props = {
   likes: number;
   dislikes: number;
   myVote: -1 | 0 | 1;
-  viewer: "signed-out" | "author" | "voter";
+  viewer: "signed-out" | "author" | "denied" | "voter";
 };
 
 function Thumb({ down }: { down?: boolean }) {
@@ -64,10 +64,10 @@ export function RatingButtons({ slug, likes, dislikes, myVote, viewer }: Props) 
       <button
         type="button"
         onClick={() => vote(v)}
-        disabled={pending || viewer === "author"}
+        disabled={pending || viewer !== "voter"}
         aria-pressed={active}
         aria-label={`${label} (${count})`}
-        title={viewer === "author" ? "You can't rate your own route" : label}
+        title={viewer === "author" ? "You can't rate your own route" : viewer === "denied" ? "You can't rate routes" : label}
         className={cls}
       >
         <Thumb down={v === -1} /> {count}

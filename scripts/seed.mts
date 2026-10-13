@@ -32,8 +32,12 @@ const dir = path.join(repo, "BeamJoyServer/bundledContent/activities");
 const proxy = await getPlatformProxy<CloudflareEnv>();
 const db = drizzle(proxy.env.DB, { schema });
 
-const author = { id: "seed:beamjoy", name: "BeamJoy bundled" };
-const voters = Array.from({ length: 12 }, (_, i) => ({ id: `seed:voter${i}`, name: `Seed voter ${i + 1}` }));
+const author = { id: "seed:beamjoy", slug: "beamjoy-bundled", name: "BeamJoy bundled" };
+const voters = Array.from({ length: 12 }, (_, i) => ({
+  id: `seed:voter${i}`,
+  slug: `seed-voter-${i + 1}`,
+  name: `Seed voter ${i + 1}`,
+}));
 await db.insert(schema.users).values([author, ...voters]).onConflictDoNothing();
 
 const guessSurface = (name: string) => {

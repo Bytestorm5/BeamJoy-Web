@@ -6,6 +6,7 @@ import { RouteCard } from "@/components/route-card";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { activeFilterCount, filtersToQuery, parseFilters, type Filters } from "@/lib/filters";
 import { pluralize } from "@/lib/format";
+import { getViewer, requireReadRoutes } from "@/lib/access";
 import { getUser, mapFacets, searchRoutes } from "@/lib/queries";
 
 /**
@@ -21,6 +22,7 @@ export async function Catalog({
   basePath?: string;
   lockedMap?: string;
 }) {
+  await requireReadRoutes(await getViewer());
   const parsed = parseFilters(await searchParams);
   // URLs never carry the locked map; queries always do.
   const filters = lockedMap ? { ...parsed, maps: [] } : parsed;

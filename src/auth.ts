@@ -2,11 +2,13 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
+import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { freeSlug } from "@/lib/queries";
 
 declare module "next-auth" {
   interface Session {
-    user: { id: string } & DefaultSession["user"];
+    user: { id: string; slug: string } & DefaultSession["user"];
   }
 }
 
@@ -49,17 +51,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const id = `${account.provider}:${account.providerAccountId}`;
         const name = (user?.name || "Driver").slice(0, 60);
         const image = user?.image ?? null;
-        await getDb()
-          .insert(schema.users)
-          .values({ id, name, image })
-          .onConflictDoUpdate({ target: schema.users.id, set: { name, image } });
+        const db = getDb();
+        const [existing] = await db
+          .select({ slug: schema.users.slug })
+          .from(schema.users)
+          .where(eq(schema.users.id, id))
+          .limit(1);
+        let slug = existing?.slug;
+        if (slug) {
+          await db.update(schema.users).set({ name, image }).where(eq(schema.users.id, id));
+        } else {
+          // The profile URL is fixed at first sign-in; later renames don't move it.
+          slug = await freeSlug(schema.users.slug, name, "driver");
+          await db.insert(schema.users).values({ id, slug, name, image });
+        }
         token.uid = id;
+        token.slug = slug;
         token.name = name;
       }
       return token;
     },
     session({ session, token }) {
       if (token.uid) session.user.id = token.uid as string;
+      if (token.slug) session.user.slug = token.slug as string;
       return session;
     },
   },
@@ -67,13 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 export async function currentUser() {
   const session = await auth();
-  return session?.user?.id ? session.user : null;
+  // A token from before profile slugs existed has no slug: treat it as signed out.
+  return session?.user?.id && session.user.slug ? session.user : null;
 }
 
-const adminIds = new Set(
-  (process.env.ADMIN_USER_IDS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean),
-);
-export const isAdmin = (userId: string | undefined | null) => !!userId && adminIds.has(userId);

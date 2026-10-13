@@ -42,7 +42,9 @@ function whereFor(f: Filters): SQL | undefined {
   if (f.cmax != null) c.push(lte(routes.corners, f.cmax));
   if (f.grid != null) c.push(gte(routes.gridSlots, f.grid));
   if (f.branching) c.push(eq(routes.branching, true));
-  if (f.author) c.push(eq(routes.authorId, f.author));
+  if (f.author) {
+    c.push(eq(routes.authorId, sql`(select ${users.id} from ${users} where ${users.slug} = ${f.author})`));
+  }
   if (f.tag) {
     c.push(
       exists(
@@ -124,7 +126,7 @@ export async function mapFacets() {
 /** By public slug. Deduped per request: generateMetadata and the page body both need it. */
 export const getRoute = cache(async (slug: string) => {
   const [row] = await getDb()
-    .select({ route: routes, author: { id: users.id, name: users.name, image: users.image } })
+    .select({ route: routes, author: { slug: users.slug, name: users.name, image: users.image } })
     .from(routes)
     .innerJoin(users, eq(users.id, routes.authorId))
     .where(eq(routes.slug, slug))
@@ -140,8 +142,13 @@ export const getRoute = cache(async (slug: string) => {
 
 export type RouteDetail = NonNullable<Awaited<ReturnType<typeof getRoute>>>;
 
-export async function getUser(id: string) {
-  const [u] = await getDb().select().from(users).where(eq(users.id, id)).limit(1);
+/** A user by public slug. */
+export async function getUser(slug: string) {
+  const [u] = await getDb()
+    .select({ slug: users.slug, name: users.name, image: users.image })
+    .from(users)
+    .where(eq(users.slug, slug))
+    .limit(1);
   return u ?? null;
 }
 
@@ -204,15 +211,18 @@ export async function myVote(routeId: string, userId: string): Promise<-1 | 0 | 
   return row?.value === 1 ? 1 : row?.value === -1 ? -1 : 0;
 }
 
-/** First free slug for a new route's title: `name`, then `name-2`, `name-3`… */
-export async function freeRouteSlug(title: string) {
-  const base = slugify(title) || "route";
+/**
+ * First free slug in a table's `slug` column for some text: `text`, then `text-2`, `text-3`…
+ * Every public URL key (routes, users) is allocated here.
+ */
+export async function freeSlug(column: typeof routes.slug | typeof users.slug, text: string, fallback: string) {
+  const base = slugify(text) || fallback;
   const taken = new Set(
     (
       await getDb()
-        .select({ slug: routes.slug })
-        .from(routes)
-        .where(or(eq(routes.slug, base), like(routes.slug, `${base}-%`)))
+        .select({ slug: column })
+        .from(column.table)
+        .where(or(eq(column, base), like(column, `${base}-%`)))
     ).map((r) => r.slug),
   );
   if (!taken.has(base)) return base;

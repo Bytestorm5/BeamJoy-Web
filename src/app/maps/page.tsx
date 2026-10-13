@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Pagination } from "@/components/pagination";
 import { VANILLA_MAPS } from "@/lib/constants";
 import { pluralize } from "@/lib/format";
-import { mapPath } from "@/lib/maps";
+import { mapPath } from "@/lib/paths";
 import { listModMaps, vanillaMapCounts } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Maps" };

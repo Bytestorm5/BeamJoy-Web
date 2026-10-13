@@ -1,0 +1,345 @@
+{
+  "formatVersion": 1,
+  "namespace": "bj",
+  "namespaces": [
+    "bj",
+    "alfiz_internal"
+  ],
+  "leaves": [
+    {
+      "key": "alfiz_internal.access.manage_grants",
+      "groupPath": "alfiz_internal.access",
+      "name": "manage_grants",
+      "description": "Create and delete grants",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.access.manage_groups",
+      "groupPath": "alfiz_internal.access",
+      "name": "manage_groups",
+      "description": "Create, edit, delete user groups and their parentage",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.access.manage_reporting",
+      "groupPath": "alfiz_internal.access",
+      "name": "manage_reporting",
+      "description": "Edit reporting (manager) edges",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.access.manage_revokes",
+      "groupPath": "alfiz_internal.access",
+      "name": "manage_revokes",
+      "description": "Create and delete personal revokes",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.access.manage_roles",
+      "groupPath": "alfiz_internal.access",
+      "name": "manage_roles",
+      "description": "Create, edit, delete roles",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.access.read",
+      "groupPath": "alfiz_internal.access",
+      "name": "read",
+      "description": "View the access administration surface",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.access.view_as",
+      "groupPath": "alfiz_internal.access",
+      "name": "view_as",
+      "description": "Preview the product as a role or an individual",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.audit.read",
+      "groupPath": "alfiz_internal.audit",
+      "name": "read",
+      "description": "Read the audit log",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.catalog.publish_catalog",
+      "groupPath": "alfiz_internal.catalog",
+      "name": "publish_catalog",
+      "description": "Publish a verified catalog to the provider",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.catalog.read",
+      "groupPath": "alfiz_internal.catalog",
+      "name": "read",
+      "description": "View the published catalog",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.requests.decide_request",
+      "groupPath": "alfiz_internal.requests",
+      "name": "decide_request",
+      "description": "Approve or deny an access request",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "alfiz_internal.requests.read",
+      "groupPath": "alfiz_internal.requests",
+      "name": "read",
+      "description": "View the approvals inbox",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.create",
+      "groupPath": "bj.routes",
+      "name": "create",
+      "label": "Share routes",
+      "description": "Publish a new route.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.delete",
+      "groupPath": "bj.routes",
+      "name": "delete",
+      "label": "Delete any route",
+      "description": "Delete routes shared by anyone (moderation).",
+      "kind": "action",
+      "destructive": true,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.delete_own",
+      "groupPath": "bj.routes",
+      "name": "delete_own",
+      "label": "Delete own routes",
+      "description": "Delete a route you shared.",
+      "kind": "action",
+      "destructive": true,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "requiresCondition": true,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.rate_route",
+      "groupPath": "bj.routes",
+      "name": "rate_route",
+      "label": "Rate routes",
+      "description": "Like or dislike a route that isn't yours.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "requiresCondition": true,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.read",
+      "groupPath": "bj.routes",
+      "name": "read",
+      "label": "View routes",
+      "description": "Browse and open shared routes.",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.record_activity",
+      "groupPath": "bj.routes",
+      "name": "record_activity",
+      "label": "Count views and downloads",
+      "description": "Record a page view or share-code copy on a route.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.update",
+      "groupPath": "bj.routes",
+      "name": "update",
+      "label": "Edit any route",
+      "description": "Edit routes shared by anyone (moderation).",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.update_own",
+      "groupPath": "bj.routes",
+      "name": "update_own",
+      "label": "Edit own routes",
+      "description": "Edit a route you shared.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "requiresCondition": true,
+      "origin": "owned"
+    }
+  ],
+  "groups": [
+    {
+      "path": "alfiz_internal",
+      "description": "Alfiz administration",
+      "groups": [
+        "alfiz_internal.access",
+        "alfiz_internal.requests",
+        "alfiz_internal.audit",
+        "alfiz_internal.catalog"
+      ],
+      "permissions": [],
+      "origin": "owned"
+    },
+    {
+      "path": "alfiz_internal.access",
+      "description": "Roles, groups, grants, revokes, hierarchy, view-as",
+      "groups": [],
+      "permissions": [
+        "alfiz_internal.access.read",
+        "alfiz_internal.access.manage_roles",
+        "alfiz_internal.access.manage_groups",
+        "alfiz_internal.access.manage_grants",
+        "alfiz_internal.access.manage_revokes",
+        "alfiz_internal.access.manage_reporting",
+        "alfiz_internal.access.view_as"
+      ],
+      "origin": "owned"
+    },
+    {
+      "path": "alfiz_internal.audit",
+      "description": "The audit log",
+      "groups": [],
+      "permissions": [
+        "alfiz_internal.audit.read"
+      ],
+      "origin": "owned"
+    },
+    {
+      "path": "alfiz_internal.catalog",
+      "description": "Catalog administration",
+      "groups": [],
+      "permissions": [
+        "alfiz_internal.catalog.read",
+        "alfiz_internal.catalog.publish_catalog"
+      ],
+      "origin": "owned"
+    },
+    {
+      "path": "alfiz_internal.requests",
+      "description": "Access requests and approvals",
+      "groups": [],
+      "permissions": [
+        "alfiz_internal.requests.read",
+        "alfiz_internal.requests.decide_request"
+      ],
+      "origin": "owned"
+    },
+    {
+      "path": "bj",
+      "groups": [
+        "bj.routes"
+      ],
+      "permissions": [],
+      "origin": "owned"
+    },
+    {
+      "path": "bj.routes",
+      "groups": [],
+      "permissions": [
+        "bj.routes.read",
+        "bj.routes.create",
+        "bj.routes.update",
+        "bj.routes.update_own",
+        "bj.routes.delete",
+        "bj.routes.delete_own",
+        "bj.routes.rate_route",
+        "bj.routes.record_activity"
+      ],
+      "origin": "owned"
+    }
+  ],
+  "scopeTypes": [
+    {
+      "type": "bj.route",
+      "parent": null,
+      "multiParent": false
+    }
+  ],
+  "navigation": [],
+  "conventions": {
+    "depth": 3
+  }
+}

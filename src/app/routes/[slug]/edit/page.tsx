@@ -2,20 +2,27 @@ import type { Metadata } from "next";
 import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { updateRoute } from "@/app/actions";
-import { currentUser, isAdmin } from "@/auth";
+import { getViewer, isAccessDenied, requireUpdateRoute } from "@/lib/access";
 import { RouteForm } from "@/components/route-form";
-import { routePath } from "@/lib/maps";
+import { routePath } from "@/lib/paths";
 import { getRoute } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Edit route" };
 
 export default async function EditRoutePage({ params }: PageProps<"/routes/[slug]/edit">) {
   const { slug } = await params;
-  const [route, user] = await Promise.all([getRoute(slug), currentUser()]);
+  const [route, viewer] = await Promise.all([getRoute(slug), getViewer()]);
   if (!route) notFound();
+  let allowed = true;
+  try {
+    await requireUpdateRoute(viewer, route);
+  } catch (e) {
+    if (!isAccessDenied(e)) throw e;
+    allowed = false;
+  }
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <Editor slug={slug} route={route} user={user} />
+      <Editor slug={slug} route={route} allowed={allowed} />
     </div>
   );
 }
@@ -23,13 +30,13 @@ export default async function EditRoutePage({ params }: PageProps<"/routes/[slug
 function Editor({
   slug,
   route,
-  user,
+  allowed,
 }: {
   slug: string;
   route: NonNullable<Awaited<ReturnType<typeof getRoute>>>;
-  user: Awaited<ReturnType<typeof currentUser>>;
+  allowed: boolean;
 }) {
-  if (!user || (user.id !== route.authorId && !isAdmin(user.id))) {
+  if (!allowed) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
         <p className="font-display text-2xl font-semibold uppercase">Not your route</p>

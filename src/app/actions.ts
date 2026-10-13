@@ -4,15 +4,24 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { currentUser, isAdmin, signIn, signOut } from "@/auth";
+import {
+  getViewer,
+  isAccessDenied,
+  requireCreateRoute,
+  requireDeleteRoute,
+  requireRateRoute,
+  requireRecordActivity,
+  requireUpdateRoute,
+} from "@/lib/access";
+import { ALFIZ_SYSTEM, alfizApp } from "@/lib/alfiz/app";
 import { getDb, schema } from "@/db";
 import { LIMITS } from "@/lib/constants";
 import { parseRouteForm, type FieldErrors } from "@/lib/route-input";
 import { analyzeRace } from "@/lib/sharecode/analyze";
 import { decodeShareCode, ShareCodeError } from "@/lib/sharecode/codec";
 import { isBot, utcDay, wilsonScore } from "@/lib/metrics";
-import { routePath } from "@/lib/maps";
-import { freeRouteSlug } from "@/lib/queries";
+import { routePath } from "@/lib/paths";
+import { freeSlug } from "@/lib/queries";
 import { deleteImages, sniffImageType, storeImage } from "@/lib/storage";
 
 const { routes, routeImages, routeTags, routeDailyStats, routeVotes } = schema;
@@ -67,9 +76,19 @@ function statColumns(analysis: ReturnType<typeof analyzeRace>, cornersOverride: 
   };
 }
 
+/** A denied gate as form feedback; anything else is a real error. */
+function denied(e: unknown, signedOut: string, forbidden: string): FormState {
+  if (!isAccessDenied(e)) throw e;
+  return { message: e.reason === "unauthenticated" ? signedOut : forbidden };
+}
+
 export async function createRoute(_prev: FormState, fd: FormData): Promise<FormState> {
-  const user = await currentUser();
-  if (!user) return { message: "Sign in to share." };
+  let user;
+  try {
+    user = await requireCreateRoute(await getViewer());
+  } catch (e) {
+    return denied(e, "Sign in to share.", "You can't share routes.");
+  }
 
   const code = await analyzeCode(String(fd.get("shareCode") ?? ""));
   if (!code.ok) return { errors: { shareCode: code.message } };
@@ -84,7 +103,7 @@ export async function createRoute(_prev: FormState, fd: FormData): Promise<FormS
   const d = input.data;
   // Upload first so the rows can reference the stored files in one atomic batch.
   const [slug, stored] = await Promise.all([
-    freeRouteSlug(d.title),
+    freeSlug(routes.slug, d.title, "route"),
     Promise.all(imgs.images.map((img) => storeImage(img.bytes, img.type))),
   ]);
   const db = getDb();
@@ -120,17 +139,19 @@ export async function createRoute(_prev: FormState, fd: FormData): Promise<FormS
   redirect(routePath(slug));
 }
 
-async function loadOwned(slug: string) {
-  const user = await currentUser();
-  if (!user) return null;
+async function routeBySlug(slug: string) {
   const [route] = await getDb().select().from(routes).where(eq(routes.slug, slug)).limit(1);
-  if (!route || (route.authorId !== user.id && !isAdmin(user.id))) return null;
-  return route;
+  return route ?? null;
 }
 
 export async function updateRoute(slug: string, _prev: FormState, fd: FormData): Promise<FormState> {
-  const route = await loadOwned(slug);
-  if (!route) return { message: "You can only edit your own routes." };
+  const route = await routeBySlug(slug);
+  if (!route) return { message: "Route not found." };
+  try {
+    await requireUpdateRoute(await getViewer(), route);
+  } catch (e) {
+    return denied(e, "Sign in to edit.", "You can only edit your own routes.");
+  }
   const routeId = route.id;
 
   const input = parseRouteForm(fd);
@@ -205,12 +226,15 @@ export async function updateRoute(slug: string, _prev: FormState, fd: FormData):
 }
 
 export async function deleteRoute(slug: string) {
-  const route = await loadOwned(slug);
+  const route = await routeBySlug(slug);
   if (!route) return;
+  await requireDeleteRoute(await getViewer(), route);
   const db = getDb();
   const images = await db.select().from(routeImages).where(eq(routeImages.routeId, route.id));
   // Tags, images, votes and daily stats cascade.
   await db.delete(routes).where(eq(routes.id, route.id));
+  // Drop any access rows scoped to the route, so a reused id can't inherit them.
+  await (await alfizApp()).deleteScope(`bj.route:${route.id}`, ALFIZ_SYSTEM);
   await deleteImages(images.map((i) => i.storageKey));
   redirect("/");
 }
@@ -223,6 +247,12 @@ export async function trackRouteEvent(slug: string, kind: "view" | "copy") {
   if (typeof slug !== "string" || !/^[a-z0-9-]{1,80}$/.test(slug)) return;
   if (kind !== "view" && kind !== "copy") return;
   if (isBot((await headers()).get("user-agent"))) return;
+  try {
+    await requireRecordActivity(await getViewer());
+  } catch (e) {
+    if (isAccessDenied(e)) return;
+    throw e;
+  }
 
   const day = utcDay();
   const jar = await cookies();
@@ -273,7 +303,7 @@ export type VoteResult = { likes: number; dislikes: number; myVote: -1 | 0 | 1; 
 
 /** Like (1), dislike (-1) or clear (0) the signed-in user's vote on a route. */
 export async function voteRoute(slug: string, value: -1 | 0 | 1): Promise<VoteResult> {
-  const user = await currentUser();
+  const viewer = await getViewer();
   const db = getDb();
   const [route] = await db
     .select({ id: routes.id, authorId: routes.authorId, likes: routes.likeCount, dislikes: routes.dislikeCount })
@@ -281,10 +311,15 @@ export async function voteRoute(slug: string, value: -1 | 0 | 1): Promise<VoteRe
     .where(eq(routes.slug, slug))
     .limit(1);
   if (!route) return { likes: 0, dislikes: 0, myVote: 0, error: "Route not found." };
-  if (!user) return { likes: route.likes, dislikes: route.dislikes, myVote: 0, error: "Sign in to rate." };
-  if (user.id === route.authorId) {
-    return { likes: route.likes, dislikes: route.dislikes, myVote: 0, error: "You can't rate your own route." };
+  const refuse = (error: string) => ({ likes: route.likes, dislikes: route.dislikes, myVote: 0 as const, error });
+  try {
+    await requireRateRoute(viewer, route);
+  } catch (e) {
+    if (!isAccessDenied(e)) throw e;
+    if (e.reason === "unauthenticated") return refuse("Sign in to rate.");
+    return refuse(viewer.user?.id === route.authorId ? "You can't rate your own route." : "You can't rate routes.");
   }
+  const user = viewer.user!;
   const routeId = route.id;
   if (value !== 1 && value !== -1 && value !== 0) value = 0;
 
@@ -308,18 +343,4 @@ export async function voteRoute(slug: string, value: -1 | 0 | 1): Promise<VoteRe
     .set({ ratingScore: wilsonScore(counts.likes, counts.dislikes) })
     .where(eq(routes.id, routeId));
   return { likes: counts.likes, dislikes: counts.dislikes, myVote: value };
-}
-
-export async function signOutAction() {
-  await signOut({ redirectTo: "/" });
-}
-
-export async function signInWith(provider: string, callbackUrl: string, fd: FormData) {
-  // Only same-site relative redirects.
-  const redirectTo = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/";
-  if (provider === "dev") {
-    await signIn("dev", { name: String(fd.get("name") ?? ""), redirectTo });
-  } else {
-    await signIn(provider, { redirectTo });
-  }
 }

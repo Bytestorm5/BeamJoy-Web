@@ -15,6 +15,20 @@
       "when": 1791921373687,
       "tag": "0001_route_slugs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791924319094,
+      "tag": "0002_user_slugs",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791924401924,
+      "tag": "0003_alfiz",
+      "breakpoints": true
     }
   ]
 }

@@ -3,31 +3,29 @@ import { Pagination } from "@/components/pagination";
 import { RouteCard } from "@/components/route-card";
 import { parseFilters } from "@/lib/filters";
 import { pluralize } from "@/lib/format";
+import { userPath } from "@/lib/paths";
 import { getUser, searchRoutes } from "@/lib/queries";
 
-export default async function UserPage({ params, searchParams }: PageProps<"/u/[id]">) {
-  const id = decodeURIComponent((await params).id);
-  const user = await getUser(id);
+export default async function UserPage({ params, searchParams }: PageProps<"/u/[slug]">) {
+  const user = await getUser((await params).slug);
   if (!user) notFound();
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <UserRoutes id={id} user={user} searchParams={searchParams} />
+      <UserRoutes user={user} searchParams={searchParams} />
     </div>
   );
 }
 
 async function UserRoutes({
-  id,
   user,
   searchParams,
 }: {
-  id: string;
   user: NonNullable<Awaited<ReturnType<typeof getUser>>>;
-  searchParams: PageProps<"/u/[id]">["searchParams"];
+  searchParams: PageProps<"/u/[slug]">["searchParams"];
 }) {
-  const filters = { ...parseFilters(await searchParams), author: id };
+  const filters = { ...parseFilters(await searchParams), author: user.slug };
   const result = await searchRoutes(filters);
-  const base = `/u/${encodeURIComponent(id)}`;
+  const base = userPath(user.slug);
 
   return (
     <>

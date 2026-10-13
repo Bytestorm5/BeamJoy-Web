@@ -20,17 +20,23 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
   browser. Screenshots are downscaled in the browser before upload.
 - **Maps** (`/maps`, `/maps/<slug>`): base-game maps and every mod map with routes; each map page
   is the catalog filtered to that map.
-- **URLs use slugs**, never database ids. A route's slug comes from its first title (`-2`, `-3`… on
-  collisions) and doesn't change when the title is edited, so links stay valid. Screenshot keys are
-  random, and server actions take the slug and resolve the id on the server.
+- **URLs use slugs**, never database ids: routes, maps and user profiles. A slug comes from the
+  first title or display name (`-2`, `-3`… on collisions) and doesn't change later, so links stay
+  valid. Screenshot keys are random, and server actions take slugs and resolve ids on the server.
 - **Metrics**: per-route views and downloads (share-code copies) bucketed by UTC day, with a
   30-day chart on each route page; like/dislike voting. Catalog cards show views, downloads
   and like %, and the catalog can sort by "Top rated" (Wilson lower bound, so one lucky vote
   doesn't top the list), "Most downloaded" and "Most viewed". Views and downloads count once per
   browser per route per day and skip obvious bots. Voting needs an account; authors can't rate
   their own routes.
-- Accounts via Discord (Auth.js). Authors can edit or delete their routes; `ADMIN_USER_IDS`
-  can moderate any.
+- Accounts via Discord (Auth.js), with profiles at `/u/<slug>`.
+- **Authorization with [Alfiz](https://docs.alfiz.dev/)**: permissions are declared in
+  `src/lib/alfiz/catalog.ts` and checked through the gates in `src/lib/access.ts`. Everyone holds
+  the member role (browse, share, rate, manage your own routes); `bj-moderator` can edit and
+  delete any route; `bj-admin` has everything. `ADMIN_USER_IDS` (internal user ids, e.g.
+  `discord:1234`) are granted `bj-admin` on startup. Alfiz data lives in D1 via a custom driver
+  that passes Alfiz's storage contract suite. `npm run authz` (run before every build) fails on
+  any server action or route handler without a gate.
 
 ## Share codes
 
@@ -83,7 +89,7 @@ run `npm run preview`.
 Checks:
 
 ```bash
-npm run lint && npm run typecheck && npm test && npm run build
+npm run lint && npm run typecheck && npm test && npm run authz && npm run build
 ```
 
 After changing `src/db/schema.ts`, run `npm run db:generate` and commit the new migration in

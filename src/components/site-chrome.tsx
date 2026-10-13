@@ -1,7 +1,8 @@
 import Link from "@/components/link";
 import { Suspense } from "react";
-import { signOutAction } from "@/app/actions";
+import { signOutAction } from "@/app/auth-actions";
 import { currentUser } from "@/auth";
+import { userPath } from "@/lib/paths";
 
 function Logo() {
   return (
@@ -36,7 +37,7 @@ async function UserMenu() {
   return (
     <div className="flex items-center gap-1">
       <Link
-        href={`/u/${encodeURIComponent(user.id)}`}
+        href={userPath(user.slug)}
         className="btn-ghost max-w-40 px-2"
         title="Your routes"
       >
