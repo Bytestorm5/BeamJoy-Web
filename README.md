@@ -122,6 +122,21 @@ deploys. Run `npm run db:migrate:remote` whenever a new migration lands.
 
 OAuth callback URLs are `<site>/api/auth/callback/<provider>`.
 
+### Bundled races
+
+BeamJoy-Revived's bundled races are listed in production under the
+BeamJoy-Revived account (`/u/beamjoy-revived`), with no made-up metrics. To load them (or add
+races upstream has added since), run the **Import bundled races** workflow from the Actions tab.
+It needs repository secrets `CLOUDFLARE_API_TOKEN` (D1 edit) and `CLOUDFLARE_ACCOUNT_ID`. Or, from
+a machine logged in to wrangler:
+
+```bash
+npm run db:import-bundled -- ../BeamJoy-Revived bundled.sql
+npx wrangler d1 execute DB --remote --file bundled.sql
+```
+
+Races already listed are skipped, so re-running is safe.
+
 Notes:
 
 - Next.js is pinned to 16.3.x: OpenNext's Cloudflare adapter (1.20.11) doesn't yet load the
