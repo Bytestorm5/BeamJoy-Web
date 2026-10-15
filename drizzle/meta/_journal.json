@@ -29,6 +29,13 @@
       "when": 1791924401924,
       "tag": "0003_alfiz",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792038450099,
+      "tag": "0004_game_link",
+      "breakpoints": true
     }
   ]
 }

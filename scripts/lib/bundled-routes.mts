@@ -71,6 +71,7 @@ export async function bundledRoutes(
         oneWayGates: race.oneWayGates,
         gates: race.gates,
         startPositions: race.startPositions,
+        props: Array.isArray(race.props) && race.props.length ? race.props : undefined,
         defaults: race.defaults,
       });
       const { stats: s, geometry } = analyzeRace((await decodeShareCode(code)).payload);
@@ -94,6 +95,7 @@ export async function bundledRoutes(
           mapKind: "vanilla",
           mapKey: map.slug,
           mapName: map.name,
+          levelId: map.level,
           surface: guessSurface(race.name),
           distanceM: s.distanceM,
           maxDistanceM: s.maxDistanceM,
@@ -110,6 +112,7 @@ export async function bundledRoutes(
           raceMode: s.mode,
           elevationGainM: s.elevationGainM,
           elevationRangeM: s.elevationRangeM,
+          propCount: s.props,
           geometry: JSON.stringify(geometry),
           createdAt: at,
           updatedAt: at,

@@ -51,6 +51,34 @@ export const catalog = defineCatalog({
       label: "Count views and downloads",
       description: "Record a page view or share-code copy on a route.",
     },
+    "bj.routes.submit_time": {
+      scopes: ["bj.route"],
+      label: "Post lap times",
+      description: "Send lap times from the game to a route's leaderboard.",
+    },
+    "bj.routes.moderate_times": {
+      scopes: ["bj.route"],
+      destructive: true,
+      label: "Remove lap times",
+      description: "Remove anyone's time from a route's leaderboard (moderation).",
+    },
+    "bj.account.read": { kind: "read", label: "View your account", description: "See your account page and linked games." },
+    "bj.account.link_game": { label: "Link the game", description: "Connect BeamNG to your account with a link code." },
+    "bj.account.unlink_own": {
+      requiresCondition: true,
+      label: "Unlink own games",
+      description: "Disconnect a game linked to your account.",
+    },
+    "bj.maps.read": { kind: "read", label: "View road maps", description: "See the road map drawn under routes." },
+    "bj.maps.upload_roads": {
+      label: "Upload map data",
+      description: "Upload a level's road map from the game.",
+    },
+    "bj.live.read": { kind: "read", label: "Watch live sessions", description: "See servers sharing live player positions." },
+    "bj.live.publish": {
+      label: "Share live sessions",
+      description: "Send a server's live player positions from the game.",
+    },
   },
 });
 
@@ -69,6 +97,23 @@ export const BUILTIN_ROLES = [
       "bj.routes.delete_own",
       "bj.routes.rate_route",
       "bj.routes.record_activity",
+    ],
+  },
+  {
+    // Its own role (not added to bj-member) because seeding is insert-only: a new role reaches
+    // existing deployments, new patterns on an existing role would not.
+    id: "bj-driver",
+    name: "Driver",
+    description: "Everyone: link the game, post lap times, share live sessions and map data.",
+    patterns: [
+      "bj.account.read",
+      "bj.account.link_game",
+      "bj.account.unlink_own",
+      "bj.routes.submit_time",
+      "bj.maps.read",
+      "bj.maps.upload_roads",
+      "bj.live.read",
+      "bj.live.publish",
     ],
   },
   {

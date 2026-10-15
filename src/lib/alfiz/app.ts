@@ -42,7 +42,7 @@ async function ensureRoleGrant(app: App, subject: SubjectId, roleId: string) {
 
 /**
  * Idempotent first-use setup, once per isolate: publish the catalog when it changed, insert any
- * missing built-in role, grant `everyone` the member role, and make ADMIN_USER_IDS administrators.
+ * missing built-in role, grant `everyone` the member and driver roles, and make ADMIN_USER_IDS administrators.
  * Remembered as a value (never a shared promise), so a cancelled request can't strand others.
  */
 async function bootstrap(app: App) {
@@ -56,6 +56,7 @@ async function bootstrap(app: App) {
     if (!have.has(role.id)) await app.createRole({ ...role, patterns: [...role.patterns] }, SYSTEM);
   }
   await ensureRoleGrant(app, "everyone", "bj-member");
+  await ensureRoleGrant(app, "everyone", "bj-driver");
   const admins = (process.env.ADMIN_USER_IDS ?? "")
     .split(",")
     .map((s) => s.trim())

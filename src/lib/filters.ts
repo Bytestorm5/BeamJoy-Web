@@ -15,6 +15,8 @@ export type Filters = {
   cmax: number | null;
   grid: number | null;
   branching: boolean;
+  /** "with": routes that place props, "none": routes without any. */
+  props: "with" | "none" | null;
   tag: string | null;
   author: string | null;
   sort: Sort;
@@ -36,6 +38,7 @@ const num = (v: string | string[] | undefined) => {
 export function parseFilters(sp: RawParams): Filters {
   const sort = one(sp.sort);
   const layout = one(sp.layout);
+  const props = one(sp.props);
   const validSurfaces = new Set<string>(SURFACES.map((s) => s.value));
   return {
     q: one(sp.q).trim().slice(0, 100),
@@ -50,6 +53,7 @@ export function parseFilters(sp: RawParams): Filters {
     cmax: num(sp.cmax),
     grid: num(sp.grid),
     branching: one(sp.branching) === "1",
+    props: props === "with" || props === "none" ? props : null,
     tag: one(sp.tag).trim().toLowerCase().slice(0, 24) || null,
     author: one(sp.author).trim() || null,
     sort: (SORTS.some((s) => s.value === sort) ? sort : "new") as Sort,
@@ -69,6 +73,7 @@ export function filtersToQuery(f: Filters, patch: Partial<Filters> = {}) {
     if (v[k] != null) p.set(k, String(v[k]));
   }
   if (v.branching) p.set("branching", "1");
+  if (v.props) p.set("props", v.props);
   if (v.tag) p.set("tag", v.tag);
   if (v.author) p.set("author", v.author);
   if (v.sort !== "new") p.set("sort", v.sort);
@@ -88,6 +93,7 @@ export function activeFilterCount(f: Filters) {
     (f.cmin != null || f.cmax != null ? 1 : 0) +
     (f.grid != null ? 1 : 0) +
     (f.branching ? 1 : 0) +
+    (f.props ? 1 : 0) +
     (f.tag ? 1 : 0) +
     (f.author ? 1 : 0)
   );

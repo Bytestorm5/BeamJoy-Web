@@ -51,6 +51,9 @@ async function UserMenu() {
         )}
         <span className="hidden truncate sm:inline">{user.name}</span>
       </Link>
+      <Link href="/account" className="btn-ghost hidden px-2 text-xs sm:inline-flex" title="Games linked to your account">
+        Game
+      </Link>
       <form action={signOutAction}>
         <button className="btn-ghost px-2 text-xs">Sign out</button>
       </form>
@@ -69,6 +72,9 @@ export function SiteHeader() {
           </Link>
           <Link href="/maps" className="btn-ghost">
             Maps
+          </Link>
+          <Link href="/live" className="btn-ghost">
+            Live
           </Link>
           <Link href="/how-it-works" className="btn-ghost">
             How it works
@@ -92,6 +98,9 @@ export function SiteHeader() {
         </Link>
         <Link href="/maps" className="btn-ghost px-3 py-1.5">
           Maps
+        </Link>
+        <Link href="/live" className="btn-ghost px-3 py-1.5">
+          Live
         </Link>
         <Link href="/how-it-works" className="btn-ghost px-3 py-1.5">
           How it works

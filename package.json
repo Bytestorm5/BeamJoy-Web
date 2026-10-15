@@ -19,6 +19,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed": "tsx scripts/seed.mts",
     "db:import-bundled": "tsx scripts/import-bundled.mts",
+    "db:backfill": "tsx scripts/backfill-routes.mts",
     "authz": "tsx scripts/alfiz-catalog.mts && alfiz-verify"
   },
   "dependencies": {

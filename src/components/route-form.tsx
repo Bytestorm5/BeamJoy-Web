@@ -204,6 +204,7 @@ export function RouteForm({
                 <p className="mt-1 text-center text-xs text-muted">
                   {stats!.loopable ? "Circuit" : "Sprint"}
                   {stats!.branching ? " · branching" : ""} · {stats!.elevationGainM} m climb
+                  {stats!.props ? ` · ${stats!.props} props` : ""}
                 </p>
               </>
             ) : (

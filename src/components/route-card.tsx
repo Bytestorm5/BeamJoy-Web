@@ -93,6 +93,7 @@ export function RouteCard({ route }: { route: RouteCardData }) {
           <p className="truncate text-sm text-muted">
             {route.mapName}
             {route.mapKind === "custom" && " (mod)"} · by {route.authorName}
+            {route.propCount > 0 && ` · ${route.propCount} props`}
           </p>
         </div>
         <dl className="mt-auto grid grid-cols-4 gap-2 border-t border-border pt-3">

@@ -195,6 +195,17 @@ export function FilterPanel({
         </select>
       </div>
 
+      <div>
+        <label htmlFor="f-props" className="label">
+          Props
+        </label>
+        <select id="f-props" name="props" defaultValue={filters.props ?? ""} className="field">
+          <option value="">Any</option>
+          <option value="with">With props</option>
+          <option value="none">No props</option>
+        </select>
+      </div>
+
       <label className="flex cursor-pointer items-center gap-2.5 text-sm">
         <input
           type="checkbox"

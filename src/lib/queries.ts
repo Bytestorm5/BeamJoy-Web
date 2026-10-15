@@ -42,6 +42,8 @@ function whereFor(f: Filters): SQL | undefined {
   if (f.cmax != null) c.push(lte(routes.corners, f.cmax));
   if (f.grid != null) c.push(gte(routes.gridSlots, f.grid));
   if (f.branching) c.push(eq(routes.branching, true));
+  if (f.props === "with") c.push(gte(routes.propCount, 1));
+  if (f.props === "none") c.push(eq(routes.propCount, 0));
   if (f.author) {
     c.push(eq(routes.authorId, sql`(select ${users.id} from ${users} where ${users.slug} = ${f.author})`));
   }
@@ -78,6 +80,7 @@ export const cardColumns = {
   checkpoints: routes.checkpoints,
   corners: routes.corners,
   gridSlots: routes.gridSlots,
+  propCount: routes.propCount,
   loopable: routes.loopable,
   branching: routes.branching,
   copyCount: routes.copyCount,
@@ -246,3 +249,13 @@ export const getMap = cache(async (slug: string): Promise<MapInfo | null> => {
   if (!row?.routes) return null;
   return { slug, name: row.name, kind: "custom", downloadUrl: row.downloadUrl, routes: row.routes };
 });
+
+/** The few columns gates and leaderboards need, by public slug. */
+export async function getRouteRef(slug: string) {
+  const [row] = await getDb()
+    .select({ id: routes.id, slug: routes.slug, title: routes.title, authorId: routes.authorId, sectors: routes.sectors })
+    .from(routes)
+    .where(eq(routes.slug, slug))
+    .limit(1);
+  return row ?? null;
+}

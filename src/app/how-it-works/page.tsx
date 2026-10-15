@@ -74,7 +74,42 @@ export default function HowItWorksPage() {
             <dt className="font-medium text-text">Gates, grid, sectors, laps</dt>
             <dd>Straight from the code.</dd>
           </div>
+          <div>
+            <dt className="font-medium text-text">Props</dt>
+            <dd>Counted like the game&apos;s prop budget: a line counts each prop, a curb or painted line one per 20 segments.</dd>
+          </div>
         </dl>
+      </section>
+
+      <section id="live" className="mt-10 scroll-mt-24">
+        <h2 className="mb-4 font-display text-2xl font-semibold uppercase">BeamJoy Live</h2>
+        <p className="mb-4 text-text-2">
+          A mod that connects your server&apos;s BeamJoy-Revived to this site. The host installs it; players just link
+          their account once.
+        </p>
+        <Steps
+          items={[
+            <>
+              Host: drop <B>BeamJoyLive.zip</B> next to BeamJoy in <B>Resources/Client</B>, and the
+              <B> BeamJoyLive</B> folder in <B>Resources/Server</B>. Get them from{" "}
+              <a href="https://github.com/Bytestorm5/BeamJoy-Revived-Live/releases" className="text-accent hover:underline">
+                GitHub
+              </a>
+              .
+            </>,
+            <>
+              Player: press <B>Shift+F4</B>, pick <B>Link account</B>, approve the code in the browser that opens.
+            </>,
+            <>
+              Upload a race with every detail from the <B>Upload</B> tab, aerial shot included. Laps you drive on listed
+              routes go to their leaderboards.
+            </>,
+            <>
+              Hosts can share where everyone is on <Link href="/live" className="text-accent hover:underline">Live</Link>
+              {" "}(off by default).
+            </>,
+          ]}
+        />
       </section>
     </div>
   );

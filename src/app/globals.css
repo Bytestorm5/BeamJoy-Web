@@ -21,6 +21,7 @@
   --route-line: #e35d00;
   --route-branch: #9aa3af;
   --chart-grid: #e5e8ed;
+  --road: #dde2e9;
   /* Activity chart series (validated pair: CVD + contrast, both themes). */
   --series-views: #2a78d6;
   --series-downloads: #e35d00;
@@ -47,6 +48,7 @@
     --route-line: #ff8a33;
     --route-branch: #4d5866;
     --chart-grid: #222932;
+    --road: #29313b;
     --series-views: #3987e5;
     --series-downloads: #e5641a;
     color-scheme: dark;

@@ -99,3 +99,72 @@ export async function routeControls(viewer: Viewer, route: RouteRef) {
     rate: snap.can("bj.routes.rate_route", scope, { condition: () => !own }),
   };
 }
+
+/** The viewer's own account page. */
+export async function requireReadAccount(viewer: Viewer) {
+  requireSignedIn(viewer, "bj.account.read");
+  await (await alfizClient()).require(viewer.principal, "bj.account.read");
+  return viewer.user;
+}
+
+/** Connect the game to the viewer's account (approving a link code). */
+export async function requireLinkGame(viewer: Viewer) {
+  requireSignedIn(viewer, "bj.account.link_game");
+  await (await alfizClient()).require(viewer.principal, "bj.account.link_game");
+  return viewer.user;
+}
+
+/** What an unlink gate needs to know about a linked game. */
+export type GameLinkRef = { userId: string };
+
+export async function requireUnlinkGame(viewer: Viewer, link: GameLinkRef) {
+  requireSignedIn(viewer, "bj.account.unlink_own");
+  const allowed = await (await alfizClient()).can.fresh(viewer.principal, "bj.account.unlink_own", undefined, {
+    condition: () => viewer.user?.id === link.userId,
+  });
+  if (!allowed) throw new AccessDeniedError({ reason: "forbidden", permission: "bj.account.unlink_own" });
+}
+
+/** A lap time from the game, onto a route's leaderboard. */
+export async function requireSubmitTime(viewer: Viewer, route: RouteRef) {
+  requireSignedIn(viewer, "bj.routes.submit_time");
+  await (await alfizClient()).require(viewer.principal, "bj.routes.submit_time", routeScope(route));
+  return viewer.user;
+}
+
+/** Remove someone's time from a leaderboard. Destructive, so it bypasses the caches. */
+export async function requireModerateTimes(viewer: Viewer, route: RouteRef) {
+  requireSignedIn(viewer, "bj.routes.moderate_times");
+  const scope = routeScope(route);
+  const allowed = await (await alfizClient()).can.fresh(viewer.principal, "bj.routes.moderate_times", scope);
+  if (!allowed) throw new AccessDeniedError({ reason: "forbidden", permission: "bj.routes.moderate_times", scope });
+}
+
+/** Whether the leaderboard shows remove buttons. */
+export async function leaderboardControls(viewer: Viewer, route: RouteRef) {
+  if (!viewer.user) return { moderate: false };
+  return { moderate: await (await alfizClient()).can(viewer.principal, "bj.routes.moderate_times", routeScope(route)) };
+}
+
+/** Upload a level's road map from the game. */
+export async function requireUploadRoads(viewer: Viewer) {
+  requireSignedIn(viewer, "bj.maps.upload_roads");
+  await (await alfizClient()).require(viewer.principal, "bj.maps.upload_roads");
+  return viewer.user;
+}
+
+/** Level road maps, drawn under route and live maps. */
+export async function requireReadMaps(viewer: Viewer) {
+  await (await alfizClient()).require(viewer.principal, "bj.maps.read");
+}
+
+export async function requireReadLive(viewer: Viewer) {
+  await (await alfizClient()).require(viewer.principal, "bj.live.read");
+}
+
+/** A server's live player list, sent by one of its players' games. */
+export async function requirePublishLive(viewer: Viewer) {
+  requireSignedIn(viewer, "bj.live.publish");
+  await (await alfizClient()).require(viewer.principal, "bj.live.publish");
+  return viewer.user;
+}

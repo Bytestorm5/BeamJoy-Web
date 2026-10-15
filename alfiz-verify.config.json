@@ -1,12 +1,26 @@
 {
   "catalog": "alfiz-catalog.json",
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "gateNames": [
     "requireReadRoutes",
     "requireCreateRoute",
     "requireUpdateRoute",
     "requireDeleteRoute",
     "requireRateRoute",
-    "requireRecordActivity"
+    "requireRecordActivity",
+    "requireLinkGame",
+    "requireUnlinkGame",
+    "requireSubmitTime",
+    "requireModerateTimes",
+    "requireUploadRoads",
+    "requireReadLive",
+    "requirePublishLive",
+    "requireReadAccount",
+    "requireReadMaps"
+  ],
+  "visibilityNames": [
+    "leaderboardControls"
   ]
 }

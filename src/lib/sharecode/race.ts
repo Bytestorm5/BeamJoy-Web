@@ -42,6 +42,8 @@ export const racePayloadSchema = z
     gates: z.array(raceGateSchema.loose()).min(1).max(2000),
     startPositions: z.array(raceStartPositionSchema.loose()).max(500),
     defaults: z.record(z.string(), z.unknown()).optional(),
+    /** Placed props (development builds); only counted here, see props.ts. */
+    props: z.array(z.unknown()).max(20_000).optional(),
   })
   .loose();
 

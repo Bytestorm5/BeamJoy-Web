@@ -29,10 +29,28 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
   doesn't top the list), "Most downloaded" and "Most viewed". Views and downloads count once per
   browser per route per day and skip obvious bots. Voting needs an account; authors can't rate
   their own routes.
+- **Props**: each route's prop count, weighed like the game's prop budget (a line counts each
+  prop, a curb or painted line one per 20 segments), shown on the route page and filterable.
+- **BeamJoy Live** ([BeamJoy-Revived-Live](https://github.com/Bytestorm5/BeamJoy-Revived-Live),
+  a mod for BeamJoy-Revived servers) talks to the game API under `/api/game/*`:
+  - **Linking** (`/link`, `/account`): device-code style. The game asks for a code, the player
+    approves it while signed in, the game gets a token (`bjl_…`, stored hashed in `game_tokens`).
+    No password in game, revocable from the Game page.
+  - **Uploads** (`POST /api/game/routes`): same validation as the form; the map comes from the
+    game's level, screenshots and an aerial shot arrive as base64 JPEGs.
+  - **Leaderboards** (`POST /api/game/laps`, `/routes/<slug>/leaderboard`): each driver's best
+    lap and best theoretical lap (sum of their best sectors) per route, matched to the race by
+    its gates (same map, same gate count, every gate within 3 m). Laps faster than 150 m/s on
+    average are refused. The page polls for new times; moderators can remove one.
+  - **Road maps** (`POST /api/game/levels/<level>/roads`): a level's road graph, uploaded once by
+    the first linked player on it, stored gzipped in R2 (`levels/`), drawn under route and live
+    maps. Routes can also carry an aerial shot from the game.
+  - **Live** (`/live`): servers whose host opted in send their player list every few seconds.
 - Accounts via Discord (Auth.js), with profiles at `/u/<slug>`.
 - **Authorization with [Alfiz](https://docs.alfiz.dev/)**: permissions are declared in
   `src/lib/alfiz/catalog.ts` and checked through the gates in `src/lib/access.ts`. Everyone holds
-  the member role (browse, share, rate, manage your own routes); `bj-moderator` can edit and
+  the member role (browse, share, rate, manage your own routes) and the driver role (link the game,
+  post lap times, share live sessions and road maps); `bj-moderator` can edit and
   delete any route; `bj-admin` has everything. `ADMIN_USER_IDS` (internal user ids, e.g.
   `discord:1234`) are granted `bj-admin` on startup. Alfiz data lives in D1 via a custom driver
   that passes Alfiz's storage contract suite. `npm run authz` (run before every build) fails on
@@ -136,6 +154,15 @@ npx wrangler d1 execute DB --remote --file bundled.sql
 ```
 
 Races already listed are skipped, so re-running is safe.
+
+### Backfilling new columns
+
+Columns added after routes were listed (`prop_count`, `level_id`) are filled by:
+
+```bash
+npm run db:backfill -- --remote backfill.sql
+npx wrangler d1 execute DB --remote --file backfill.sql
+```
 
 Notes:
 

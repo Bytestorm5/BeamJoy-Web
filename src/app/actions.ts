@@ -17,63 +17,29 @@ import { ALFIZ_SYSTEM, alfizApp } from "@/lib/alfiz/app";
 import { getDb, schema } from "@/db";
 import { LIMITS } from "@/lib/constants";
 import { parseRouteForm, type FieldErrors } from "@/lib/route-input";
-import { analyzeRace } from "@/lib/sharecode/analyze";
-import { decodeShareCode, ShareCodeError } from "@/lib/sharecode/codec";
+import { vanillaMapBySlug } from "@/lib/maps";
+import { analyzeCode, checkImage, insertRoute, statColumns, type ImageBytes } from "@/lib/route-write";
 import { isBot, utcDay, wilsonScore } from "@/lib/metrics";
 import { routePath } from "@/lib/paths";
-import { freeSlug } from "@/lib/queries";
-import { deleteImages, sniffImageType, storeImage } from "@/lib/storage";
+import { deleteImages, storeImage } from "@/lib/storage";
 
 const { routes, routeImages, routeTags, routeDailyStats, routeVotes } = schema;
 
 export type FormState = { errors?: FieldErrors; message?: string };
-
-async function analyzeCode(code: string) {
-  try {
-    const decoded = await decodeShareCode(code);
-    return { ok: true as const, decoded, analysis: analyzeRace(decoded.payload) };
-  } catch (e) {
-    const message = e instanceof ShareCodeError ? e.message : "Invalid share code.";
-    return { ok: false as const, message };
-  }
-}
 
 async function readImages(fd: FormData, room: number) {
   const files = fd.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
   if (files.length > room) {
     return { error: `Up to ${LIMITS.images} screenshots.` };
   }
-  const out: { bytes: Uint8Array; type: string }[] = [];
+  const out: ImageBytes[] = [];
   for (const f of files) {
     if (f.size > LIMITS.imageBytes) return { error: `"${f.name}" is over 5 MB.` };
-    const bytes = new Uint8Array(await f.arrayBuffer());
-    const type = sniffImageType(bytes);
-    if (!type) return { error: `"${f.name}" isn’t a supported image.` };
-    out.push({ bytes, type });
+    const img = checkImage(new Uint8Array(await f.arrayBuffer()), f.name);
+    if ("error" in img) return img;
+    out.push(img);
   }
   return { images: out };
-}
-
-function statColumns(analysis: ReturnType<typeof analyzeRace>, cornersOverride: number | null) {
-  const s = analysis.stats;
-  return {
-    distanceM: s.distanceM,
-    maxDistanceM: s.maxDistanceM,
-    checkpoints: s.checkpoints,
-    steps: s.steps,
-    corners: cornersOverride ?? s.corners,
-    cornersAuto: s.corners,
-    hairpins: s.hairpins,
-    gridSlots: s.gridSlots,
-    loopable: s.loopable,
-    branching: s.branching,
-    sectors: s.sectors,
-    defaultLaps: s.defaultLaps,
-    raceMode: s.mode,
-    elevationGainM: s.elevationGainM,
-    elevationRangeM: s.elevationRangeM,
-    geometry: JSON.stringify(analysis.geometry),
-  };
 }
 
 /** A denied gate as form feedback; anything else is a real error. */
@@ -99,43 +65,14 @@ export async function createRoute(_prev: FormState, fd: FormData): Promise<FormS
   const imgs = await readImages(fd, LIMITS.images);
   if ("error" in imgs) return { errors: { images: imgs.error } };
 
-  const id = nanoid(10);
-  const d = input.data;
-  // Upload first so the rows can reference the stored files in one atomic batch.
-  const [slug, stored] = await Promise.all([
-    freeSlug(routes.slug, d.title, "route"),
-    Promise.all(imgs.images.map((img) => storeImage(img.bytes, img.type))),
-  ]);
-  const db = getDb();
-  try {
-    await db.batch([
-      db.insert(routes).values({
-        id,
-        slug,
-        title: d.title,
-        description: d.description,
-        authorId: user.id,
-        activityType: code.decoded.type,
-        shareCode: code.decoded.code,
-        mapKind: d.mapKind,
-        mapKey: d.mapKey,
-        mapName: d.mapName,
-        mapDownloadUrl: d.mapDownloadUrl,
-        surface: d.surface,
-        videoUrl: d.videoUrl ?? null,
-        coverUrl: stored[0]?.url ?? null,
-        ...statColumns(code.analysis, d.cornersOverride),
-      }),
-      ...d.tags.map((tag) => db.insert(routeTags).values({ routeId: id, tag })),
-      ...stored.map((s, i) =>
-        db.insert(routeImages).values({ id: nanoid(12), routeId: id, url: s.url, storageKey: s.storageKey, position: i }),
-      ),
-    ]);
-  } catch (e) {
-    await deleteImages(stored.map((s) => s.storageKey));
-    throw e;
-  }
-
+  const slug = await insertRoute({
+    authorId: user.id,
+    decoded: code.decoded,
+    analysis: code.analysis,
+    input: input.data,
+    images: imgs.images,
+    levelId: vanillaMapBySlug(input.data.mapKey)?.level ?? null,
+  });
   redirect(routePath(slug));
 }
 
@@ -235,7 +172,7 @@ export async function deleteRoute(slug: string) {
   await db.delete(routes).where(eq(routes.id, route.id));
   // Drop any access rows scoped to the route, so a reused id can't inherit them.
   await (await alfizApp()).deleteScope(`bj.route:${route.id}`, ALFIZ_SYSTEM);
-  await deleteImages(images.map((i) => i.storageKey));
+  await deleteImages([...images.map((i) => i.storageKey), ...(route.aerialKey ? [route.aerialKey] : [])]);
   redirect("/");
 }
 

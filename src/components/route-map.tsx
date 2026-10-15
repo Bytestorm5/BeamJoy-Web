@@ -5,8 +5,15 @@ import type { RouteGeometry, Vec2, Vec3 } from "@/lib/sharecode/analyze";
  * x = east, y = north, so y is flipped for screen space.
  */
 
+/** Roads under the route, in world coordinates (see lib/roads.ts and components/route-basemap.tsx). */
+export type RoadLayer = { width: number; d: Vec2[][] }[];
+/** A top-down shot from the game and the world box it covers: [minX, minY, maxX, maxY]. */
+export type AerialLayer = { url: string; bounds: [number, number, number, number] };
+
 type Props = {
   geometry: RouteGeometry;
+  roads?: RoadLayer | null;
+  aerial?: AerialLayer | null;
   /** "thumb" draws only the racing line, for catalog cards. */
   variant?: "thumb" | "full";
   className?: string;
@@ -36,16 +43,29 @@ function project(geometry: RouteGeometry, size: number, pad: number) {
     +(offX + (x - minX) * scale).toFixed(1),
     +(offY + (maxY - y) * scale).toFixed(1),
   ];
-  return { p, metersPerUnit: 1 / scale };
+  /** The world box the whole view shows (wider than the route on its short side). */
+  const view: [number, number, number, number] = [
+    minX - offX / scale,
+    maxY - (size - offY) / scale,
+    minX + (size - offX) / scale,
+    maxY + offY / scale,
+  ];
+  return { p, metersPerUnit: 1 / scale, scale, view };
+}
+
+/** The world box a full-size map of this route shows, so a basemap can be cropped to it. */
+export function routeView(geometry: RouteGeometry) {
+  return project(geometry, 400, 36).view;
 }
 
 const path = (pts: Vec2[], close = false) =>
   pts.length ? `M${pts.map((q) => q.join(" ")).join("L")}${close ? "Z" : ""}` : "";
 
-export function RouteMap({ geometry, variant = "full", className, title }: Props) {
+export function RouteMap({ geometry, variant = "full", className, title, roads, aerial }: Props) {
   const size = 400;
   const thumb = variant === "thumb";
-  const { p, metersPerUnit } = project(geometry, size, thumb ? 28 : 36);
+  const { p, metersPerUnit, scale } = project(geometry, size, thumb ? 28 : 36);
+  const basemap = !thumb && (!!aerial || !!roads?.length);
   const primary = geometry.primary.map((i) => p(geometry.gates[i]));
   const primarySet = new Set(
     geometry.primary.slice(1).map((g, k) => `${geometry.primary[k]}>${g}`),
@@ -74,7 +94,21 @@ export function RouteMap({ geometry, variant = "full", className, title }: Props
       role="img"
       aria-label={title ?? "Route map"}
     >
-      {!thumb && (
+      {!thumb && aerial && (
+        <AerialImage aerial={aerial} p={p} />
+      )}
+      {!thumb && !aerial && roads && (
+        <g fill="none" stroke="var(--road)" strokeLinecap="round" strokeLinejoin="round">
+          {roads.map((group, i) => (
+            <path
+              key={i}
+              strokeWidth={Math.max(1.2, group.width * scale)}
+              d={group.d.map((line) => path(line.map((pt) => p(pt)))).join("")}
+            />
+          ))}
+        </g>
+      )}
+      {!thumb && !basemap && (
         <g stroke="var(--chart-grid)" strokeWidth="1">
           {[1, 2, 3].map((k) => (
             <g key={k}>
@@ -156,6 +190,9 @@ export function RouteMap({ geometry, variant = "full", className, title }: Props
 
       {!thumb && (
         <g transform={`translate(16 ${size - 18})`} className="text-[11px]">
+          {basemap && (
+            <rect x="-8" y="-22" width={size - 16} height="32" rx="6" fill="var(--surface)" opacity="0.85" />
+          )}
           <line x1="0" y1="0" x2={scaleBar.m / metersPerUnit} y2="0" stroke="var(--muted)" strokeWidth="2" />
           <line x1="0" y1="-4" x2="0" y2="4" stroke="var(--muted)" strokeWidth="2" />
           <line
@@ -175,6 +212,15 @@ export function RouteMap({ geometry, variant = "full", className, title }: Props
         </g>
       )}
     </svg>
+  );
+}
+
+function AerialImage({ aerial, p }: { aerial: AerialLayer; p: (v: Vec2) => Vec2 }) {
+  const [minX, minY, maxX, maxY] = aerial.bounds;
+  const [x0, y0] = p([minX, maxY]);
+  const [x1, y1] = p([maxX, minY]);
+  return (
+    <image href={aerial.url} x={x0} y={y0} width={x1 - x0} height={y1 - y0} preserveAspectRatio="none" />
   );
 }
 

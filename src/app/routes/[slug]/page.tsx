@@ -9,10 +9,13 @@ import { DeleteRouteButton } from "@/components/delete-route";
 import { ElevationProfile } from "@/components/elevation-profile";
 import { Gallery } from "@/components/gallery";
 import { LayoutBadge } from "@/components/route-card";
-import { RouteMap } from "@/components/route-map";
+import { RouteBasemap } from "@/components/route-basemap";
+import { vanillaMapBySlug } from "@/lib/maps";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDate, formatDistance } from "@/lib/format";
-import { mapPath, routePath, userPath } from "@/lib/paths";
+import { leaderboardPath, mapPath, routePath, userPath } from "@/lib/paths";
+import { leaderboard } from "@/lib/leaderboard";
+import { LeaderboardTable } from "@/components/leaderboard-table";
 import { getRoute, myVote, routeActivity, type RouteDetail } from "@/lib/queries";
 import { ActivityChart } from "@/components/activity-chart";
 import { RatingButtons } from "@/components/rating";
@@ -117,7 +120,16 @@ async function RouteView({ route }: { route: RouteDetail }) {
           <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="rounded-xl border border-border bg-surface p-4">
               <h2 className="mb-2 text-sm font-semibold text-text-2">Layout</h2>
-              <RouteMap geometry={geometry} className="w-full" title={`Map of ${route.title}`} />
+              <RouteBasemap
+                geometry={geometry}
+                level={route.levelId ?? vanillaMapBySlug(route.mapKey)?.level ?? null}
+                aerial={
+                  route.aerialUrl && route.aerialBounds
+                    ? { url: route.aerialUrl, bounds: JSON.parse(route.aerialBounds) as [number, number, number, number] }
+                    : null
+                }
+                title={`Map of ${route.title}`}
+              />
               <MapLegend loop={route.loopable} branching={route.branching} />
             </div>
             <div className="flex flex-col gap-4">
@@ -134,6 +146,10 @@ async function RouteView({ route }: { route: RouteDetail }) {
             </div>
             <ElevationProfile geometry={geometry} />
           </section>
+
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-surface" />}>
+            <TopTimes route={route} />
+          </Suspense>
 
           <section className="rounded-xl border border-border bg-surface p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -246,6 +262,7 @@ function StatGrid({ route }: { route: RouteDetail }) {
     { label: "Sectors", value: route.sectors },
     ...(route.defaultLaps ? [{ label: "Default laps", value: route.defaultLaps }] : []),
     { label: "Climb", value: `${route.elevationGainM} m` },
+    { label: "Props", value: route.propCount },
     { label: "Start", value: route.raceMode === "passive" ? "Rolling" : "Grid" },
   ];
   return (
@@ -292,6 +309,39 @@ function MapLegend({ loop, branching }: { loop: boolean; branching: boolean }) {
         </li>
       )}
     </ul>
+  );
+}
+
+const TOP_TIMES = 10;
+
+/** The top of the leaderboard; the full, live one has its own page. */
+async function TopTimes({ route }: { route: RouteDetail }) {
+  const board = await leaderboard(route.id, "lap", 1, TOP_TIMES);
+  return (
+    <section className="rounded-xl border border-border bg-surface p-4">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="text-sm font-semibold text-text-2">Leaderboard</h2>
+        {board.total > 0 && (
+          <Link href={leaderboardPath(route.slug)} className="text-sm text-accent hover:underline">
+            {board.total > TOP_TIMES ? `All ${board.total} drivers →` : "Live leaderboard →"}
+          </Link>
+        )}
+      </div>
+      {board.entries.length ? (
+        <LeaderboardTable
+          entries={board.entries}
+          sort="lap"
+          sectors={route.sectors}
+          fastestSectors={board.fastestSectors}
+          leaderMs={board.entries[0].bestLapMs}
+          now={board.asOf}
+        />
+      ) : (
+        <p className="py-4 text-sm text-muted">
+          No times yet. Laps driven with <Link href="/how-it-works#live" className="text-accent hover:underline">BeamJoy Live</Link> show up here.
+        </p>
+      )}
+    </section>
   );
 }
 

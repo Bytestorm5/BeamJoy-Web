@@ -1,3 +1,4 @@
+import { countProps } from "./props";
 import type { RacePayload } from "./race";
 
 /**
@@ -42,6 +43,8 @@ export type RouteStats = {
   mode: string;
   elevationGainM: number;
   elevationRangeM: number;
+  /** Weighted like the game's prop budget (see props.ts). */
+  props: number;
 };
 
 export type RouteAnalysis = { stats: RouteStats; geometry: RouteGeometry };
@@ -287,6 +290,7 @@ export function analyzeRace(race: RacePayload): RouteAnalysis {
       mode: race.mode === "passive" ? "passive" : "grid",
       elevationGainM: Math.round(gain),
       elevationRangeM: Number.isFinite(zMax) ? Math.round(zMax - zMin) : 0,
+      props: countProps(race.props),
     },
     geometry: {
       gates,

@@ -155,3 +155,30 @@ describe("countCorners", () => {
     expect(countCorners(pts, false).corners).toBe(3);
   });
 });
+
+describe("prop count", () => {
+  it("weighs props like the game's budget", async () => {
+    const { countProps } = await import("../props");
+    expect(
+      countProps([
+        { kind: "static", shape: "/art/a.dae" },
+        { kind: "static", shape: "/art/a.dae", parts: [{}, {}] },
+        { kind: "line", shape: "/art/cone.dae", count: 10 },
+        { kind: "line", shape: "/art/cone.dae", count: 4, parts: [{}], capA: "/art/c.dae", capB: "/art/c.dae" },
+        { kind: "sweep", count: 45 },
+        { kind: "paint", count: 3 },
+        "junk",
+      ]),
+    ).toBe(1 + 3 + 10 + (4 * 2 + 2) + 3 + 1);
+    expect(countProps(undefined)).toBe(0);
+  });
+
+  it("counts props carried in a share code", async () => {
+    const code = await encodeRaceShareCode({
+      ...rectangle,
+      props: [{ kind: "line", shape: "/art/cone.dae", count: 12 }],
+    });
+    const decoded = await decodeShareCode(code);
+    expect(analyzeRace(decoded.payload).stats.props).toBe(12);
+  });
+});

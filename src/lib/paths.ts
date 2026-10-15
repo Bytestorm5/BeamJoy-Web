@@ -5,3 +5,5 @@
 export const routePath = (slug: string) => `/routes/${slug}`;
 export const mapPath = (slug: string) => `/maps/${slug}`;
 export const userPath = (slug: string) => `/u/${slug}`;
+export const livePath = (slug: string) => `/live/${slug}`;
+export const leaderboardPath = (routeSlug: string) => `/routes/${routeSlug}/leaderboard`;

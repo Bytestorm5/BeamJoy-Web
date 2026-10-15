@@ -117,6 +117,7 @@ function ActiveChips({
     chips.push({ label: range(filters.cmin, filters.cmax, "corners"), patch: { cmin: null, cmax: null } });
   if (filters.grid != null) chips.push({ label: `${filters.grid}+ grid slots`, patch: { grid: null } });
   if (filters.branching) chips.push({ label: "Branching", patch: { branching: false } });
+  if (filters.props) chips.push({ label: filters.props === "with" ? "With props" : "No props", patch: { props: null } });
   if (!chips.length) return null;
 
   return (

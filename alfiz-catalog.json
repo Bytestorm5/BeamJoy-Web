@@ -139,6 +139,91 @@
       "origin": "owned"
     },
     {
+      "key": "bj.account.link_game",
+      "groupPath": "bj.account",
+      "name": "link_game",
+      "label": "Link the game",
+      "description": "Connect BeamNG to your account with a link code.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.account.read",
+      "groupPath": "bj.account",
+      "name": "read",
+      "label": "View your account",
+      "description": "See your account page and linked games.",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.account.unlink_own",
+      "groupPath": "bj.account",
+      "name": "unlink_own",
+      "label": "Unlink own games",
+      "description": "Disconnect a game linked to your account.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "requiresCondition": true,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.live.publish",
+      "groupPath": "bj.live",
+      "name": "publish",
+      "label": "Share live sessions",
+      "description": "Send a server's live player positions from the game.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.live.read",
+      "groupPath": "bj.live",
+      "name": "read",
+      "label": "Watch live sessions",
+      "description": "See servers sharing live player positions.",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.maps.read",
+      "groupPath": "bj.maps",
+      "name": "read",
+      "label": "View road maps",
+      "description": "See the road map drawn under routes.",
+      "kind": "read",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.maps.upload_roads",
+      "groupPath": "bj.maps",
+      "name": "upload_roads",
+      "label": "Upload map data",
+      "description": "Upload a level's road map from the game.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
       "key": "bj.routes.create",
       "groupPath": "bj.routes",
       "name": "create",
@@ -180,6 +265,20 @@
       "origin": "owned"
     },
     {
+      "key": "bj.routes.moderate_times",
+      "groupPath": "bj.routes",
+      "name": "moderate_times",
+      "label": "Remove lap times",
+      "description": "Remove anyone's time from a route's leaderboard (moderation).",
+      "kind": "action",
+      "destructive": true,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
       "key": "bj.routes.rate_route",
       "groupPath": "bj.routes",
       "name": "rate_route",
@@ -212,6 +311,20 @@
       "name": "record_activity",
       "label": "Count views and downloads",
       "description": "Record a page view or share-code copy on a route.",
+      "kind": "action",
+      "destructive": false,
+      "scopes": [
+        "bj.route"
+      ],
+      "impliedOnAncestors": false,
+      "origin": "owned"
+    },
+    {
+      "key": "bj.routes.submit_time",
+      "groupPath": "bj.routes",
+      "name": "submit_time",
+      "label": "Post lap times",
+      "description": "Send lap times from the game to a route's leaderboard.",
       "kind": "action",
       "destructive": false,
       "scopes": [
@@ -310,9 +423,40 @@
     {
       "path": "bj",
       "groups": [
-        "bj.routes"
+        "bj.routes",
+        "bj.account",
+        "bj.maps",
+        "bj.live"
       ],
       "permissions": [],
+      "origin": "owned"
+    },
+    {
+      "path": "bj.account",
+      "groups": [],
+      "permissions": [
+        "bj.account.read",
+        "bj.account.link_game",
+        "bj.account.unlink_own"
+      ],
+      "origin": "owned"
+    },
+    {
+      "path": "bj.live",
+      "groups": [],
+      "permissions": [
+        "bj.live.read",
+        "bj.live.publish"
+      ],
+      "origin": "owned"
+    },
+    {
+      "path": "bj.maps",
+      "groups": [],
+      "permissions": [
+        "bj.maps.read",
+        "bj.maps.upload_roads"
+      ],
       "origin": "owned"
     },
     {
@@ -326,7 +470,9 @@
         "bj.routes.delete",
         "bj.routes.delete_own",
         "bj.routes.rate_route",
-        "bj.routes.record_activity"
+        "bj.routes.record_activity",
+        "bj.routes.submit_time",
+        "bj.routes.moderate_times"
       ],
       "origin": "owned"
     }
