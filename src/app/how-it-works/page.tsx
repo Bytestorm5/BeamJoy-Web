@@ -95,10 +95,12 @@ export default function HowItWorksPage() {
               <a href="https://github.com/Bytestorm5/BeamJoy-Revived-Live/releases" className="text-accent hover:underline">
                 GitHub
               </a>
-              .
+              . Then set this site&apos;s address in BeamJoy&apos;s config window, under <B>BeamJoy Live</B>. Needs
+              BeamJoy-Revived 2.0 or later.
             </>,
             <>
-              Player: press <B>Shift+F4</B>, pick <B>Link account</B>, approve the code in the browser that opens.
+              Player: open <B>BeamJoy Live</B> in BeamJoy&apos;s main window (or press <B>Shift+F4</B>), pick{" "}
+              <B>Link account</B>, approve the code in the browser that opens.
             </>,
             <>
               Upload a race with every detail from the <B>Upload</B> tab, aerial shot included. Laps you drive on listed

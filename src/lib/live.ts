@@ -6,8 +6,8 @@ import { slugify } from "@/lib/format";
 import { vanillaMapByLevel } from "@/lib/maps";
 
 /**
- * Live sessions: BeamMP servers that opted in (BeamJoy Live's server plugin) have one linked
- * player's game send the player list every few seconds. One row per server, overwritten each
+ * Live sessions: BeamMP servers that opted in (BeamJoy Live's server plugin) send the player list
+ * every few seconds, posted by the plugin as one of their linked players. One row per server, overwritten each
  * time; a server that stops sending drops off the list after STALE_MS.
  */
 

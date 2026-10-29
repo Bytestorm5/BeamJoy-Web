@@ -55,7 +55,7 @@ async function Links() {
   if (!links.length) {
     return (
       <p className="rounded-xl border border-dashed border-border-strong px-6 py-10 text-center text-muted">
-        None yet. In game, open BeamJoy Live (Shift+F4) and pick Link account.
+        None yet. In game, open BeamJoy Live in BeamJoy&apos;s main window (or Shift+F4) and pick Link account.
       </p>
     );
   }

@@ -32,7 +32,10 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
 - **Props**: each route's prop count, weighed like the game's prop budget (a line counts each
   prop, a curb or painted line one per 20 segments), shown on the route page and filterable.
 - **BeamJoy Live** ([BeamJoy-Revived-Live](https://github.com/Bytestorm5/BeamJoy-Revived-Live),
-  a mod for BeamJoy-Revived servers) talks to the game API under `/api/game/*`:
+  a plugin for BeamJoy-Revived 2.0+ servers, built on BeamJoy's plugin API, with a client mod)
+  talks to the game API under `/api/game/*`. Most requests come from its server plugin with the
+  player's token (laps from BeamJoy's race events, linking from BeamJoy's main window, the Live
+  page); the in-game window's own (uploads) are relayed through it:
   - **Linking** (`/link`, `/account`): device-code style. The game asks for a code, the player
     approves it while signed in, the game gets a token (`bjl_…`, stored hashed in `game_tokens`).
     No password in game, revocable from the Game page.
@@ -49,7 +52,8 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
   - **Road maps** (`POST /api/game/levels/<level>/roads`): a level's road graph, uploaded once by
     the first linked player on it, stored gzipped in R2 (`levels/`), drawn under route and live
     maps. Routes can also carry an aerial shot from the game.
-  - **Live** (`/live`): servers whose host opted in send their player list every few seconds.
+  - **Live** (`/live`): servers whose host opted in send their player list every few seconds,
+    with what each racer's doing (from BeamJoy's race sessions).
 - Accounts via Discord (Auth.js), with profiles at `/u/<slug>`.
 - **Authorization with [Alfiz](https://docs.alfiz.dev/)**: permissions are declared in
   `src/lib/alfiz/catalog.ts` and checked through the gates in `src/lib/access.ts`. Everyone holds

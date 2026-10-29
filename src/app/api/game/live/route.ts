@@ -9,7 +9,7 @@ export function OPTIONS() {
   return preflight();
 }
 
-/** A server's current player list, from the one game its BeamJoy Live plugin picked to report. */
+/** A server's current player list, posted by its BeamJoy Live plugin as one of its linked players. */
 export async function POST(req: Request) {
   let user;
   try {
