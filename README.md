@@ -40,8 +40,12 @@ Built with Next.js 16 and Tailwind CSS 4, deployed to Cloudflare Workers with
     game's level, screenshots and an aerial shot arrive as base64 JPEGs.
   - **Leaderboards** (`POST /api/game/laps`, `/routes/<slug>/leaderboard`): each driver's best
     lap and best theoretical lap (sum of their best sectors) per route, matched to the race by
-    its gates (same map, same gate count, every gate within 3 m). Laps faster than 150 m/s on
-    average are refused. The page polls for new times; moderators can remove one.
+    its gates (same map, same gate count, every gate within 3 m). Standing starts (timed from
+    the grid) and flying ones (from a line crossed at speed: a circuit's later laps, a flying
+    start, a freeroam run) are separate boards. Laps faster than 150 m/s on average are refused.
+    A lap names its run (a race session's phase) and its number in it, so a resend is ignored and
+    a run disqualified afterwards can be withdrawn (`POST /api/game/laps/withdraw`): the records
+    it changed go back to how they were. The page polls for new times; moderators can remove one.
   - **Road maps** (`POST /api/game/levels/<level>/roads`): a level's road graph, uploaded once by
     the first linked player on it, stored gzipped in R2 (`levels/`), drawn under route and live
     maps. Routes can also carry an aerial shot from the game.
@@ -143,17 +147,21 @@ OAuth callback URLs are `<site>/api/auth/callback/<provider>`.
 ### Bundled races
 
 BeamJoy-Revived's bundled races are listed in production under the
-BeamJoy-Revived account (`/u/beamjoy-revived`), with no made-up metrics. To load them (or add
-races upstream has added since), run the **Import bundled races** workflow from the Actions tab.
-It needs repository secrets `CLOUDFLARE_API_TOKEN` (D1 edit) and `CLOUDFLARE_ACCOUNT_ID`. Or, from
-a machine logged in to wrangler:
+BeamJoy-Revived account (`/u/beamjoy-revived`), with no made-up metrics. To load them (or catch
+up with upstream), run the **Import bundled races** workflow from the Actions tab. It needs
+repository secrets `CLOUDFLARE_API_TOKEN` (D1 edit) and `CLOUDFLARE_ACCOUNT_ID`. Or, from a machine
+logged in to wrangler:
 
 ```bash
-npm run db:import-bundled -- ../BeamJoy-Revived bundled.sql
+npx wrangler d1 execute DB --remote --json --command "$(npm run -s db:import-bundled -- --query)" > existing.json
+npm run db:import-bundled -- ../BeamJoy-Revived bundled.sql existing.json
 npx wrangler d1 execute DB --remote --file bundled.sql
 ```
 
-Races already listed are skipped, so re-running is safe.
+Races are matched to listed routes by course, like the game's laps. A race renamed upstream
+keeps its route, slug and times; its title, share code (props, pit lane) and stats are updated. A
+race whose course changed gets a new route, and the old course keeps its times and a note.
+Re-running changes nothing that's current. Mod maps (`ks_nord`) are skipped.
 
 ### Backfilling new columns
 

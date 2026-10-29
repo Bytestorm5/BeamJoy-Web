@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { removeTime } from "@/app/leaderboard-actions";
+import type { LapStart } from "@/lib/lap-rules";
 import type { BoardSort, Leaderboard } from "@/lib/leaderboard";
 import { LeaderboardTable } from "./leaderboard-table";
 
@@ -14,6 +15,7 @@ const POLL_MS = 10_000;
  */
 export function LiveLeaderboard({
   routeSlug,
+  start: startKind,
   sort,
   page,
   sectors,
@@ -22,6 +24,7 @@ export function LiveLeaderboard({
   moderate,
 }: {
   routeSlug: string;
+  start: LapStart;
   sort: BoardSort;
   page: number;
   sectors: number;
@@ -42,10 +45,10 @@ export function LiveLeaderboard({
     const tick = async () => {
       if (document.visibilityState === "visible") {
         try {
-          const qs = `sort=${sort}&page=${page}`;
+          const qs = `start=${startKind}&sort=${sort}&page=${page}`;
           const [res, top] = await Promise.all([
             fetch(`/api/routes/${routeSlug}/leaderboard?${qs}`),
-            page > 1 ? fetch(`/api/routes/${routeSlug}/leaderboard?sort=${sort}&size=1`) : null,
+            page > 1 ? fetch(`/api/routes/${routeSlug}/leaderboard?start=${startKind}&sort=${sort}&size=1`) : null,
           ]);
           if (res.ok && !cancelled) {
             const next = (await res.json()) as Leaderboard;
@@ -70,7 +73,7 @@ export function LiveLeaderboard({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [routeSlug, sort, page]);
+  }, [routeSlug, startKind, sort, page]);
 
   if (!board.entries.length) {
     return (
@@ -101,7 +104,7 @@ export function LiveLeaderboard({
                   onClick={() => {
                     if (confirm(`Remove ${e.name}'s time?`)) {
                       start(async () => {
-                        await removeTime(routeSlug, e.userSlug);
+                        await removeTime(routeSlug, e.userSlug, startKind);
                         setBoard((b) => ({ ...b, entries: b.entries.filter((x) => x.userSlug !== e.userSlug) }));
                       });
                     }

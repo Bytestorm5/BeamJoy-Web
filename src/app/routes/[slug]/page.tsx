@@ -14,7 +14,8 @@ import { vanillaMapBySlug } from "@/lib/maps";
 import { SURFACE_LABEL } from "@/lib/constants";
 import { formatDate, formatDistance } from "@/lib/format";
 import { leaderboardPath, mapPath, routePath, userPath } from "@/lib/paths";
-import { leaderboard } from "@/lib/leaderboard";
+import { pickStart } from "@/lib/lap-rules";
+import { boardCounts, leaderboard } from "@/lib/leaderboard";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { getRoute, myVote, routeActivity, type RouteDetail } from "@/lib/queries";
 import { ActivityChart } from "@/components/activity-chart";
@@ -316,11 +317,16 @@ const TOP_TIMES = 10;
 
 /** The top of the leaderboard; the full, live one has its own page. */
 async function TopTimes({ route }: { route: RouteDetail }) {
-  const board = await leaderboard(route.id, "lap", 1, TOP_TIMES);
+  const boards = await boardCounts(route.id);
+  const start = pickStart(undefined, route.loopable, boards);
+  const board = await leaderboard(route.id, start, "lap", 1, TOP_TIMES);
+  const both = boards.standing > 0 && boards.flying > 0;
   return (
     <section className="rounded-xl border border-border bg-surface p-4">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-sm font-semibold text-text-2">Leaderboard</h2>
+        <h2 className="text-sm font-semibold text-text-2">
+          Leaderboard{both && <span className="font-normal text-muted"> · {start === "flying" ? "Flying start" : "Standing start"}</span>}
+        </h2>
         {board.total > 0 && (
           <Link href={leaderboardPath(route.slug)} className="text-sm text-accent hover:underline">
             {board.total > TOP_TIMES ? `All ${board.total} drivers →` : "Live leaderboard →"}
@@ -372,7 +378,7 @@ async function Rating({ route }: { route: RouteDetail }) {
       likes={route.likeCount}
       dislikes={route.dislikeCount}
       myVote={mine}
-      viewer={!viewer.user ? "signed-out" : can.rate ? "voter" : viewer.user.id === route.authorId ? "author" : "denied"}
+      viewer={!viewer.user ? "signed-out" : can.rate ? "voter" : can.author ? "author" : "denied"}
     />
   );
 }

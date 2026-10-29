@@ -20,7 +20,12 @@ export const BUNDLED_AUTHOR = { id: "system:beamjoy-revived", slug: "beamjoy-rev
 export type BundledRoute = {
   route: typeof schema.routes.$inferInsert;
   tags: string[];
+  /** Names the race had in earlier BeamJoy-Revived versions (renamed in place). */
+  formerNames: string[];
 };
+
+/** The description a bundled route gets; a moderator's own wording doesn't start like this. */
+export const BUNDLED_DESCRIPTION_PREFIX = "Bundled with BeamJoy-Revived.";
 
 function guessSurface(name: string) {
   const n = name.toLowerCase();
@@ -41,6 +46,15 @@ function guessTags(name: string, loop: boolean) {
   if (n.includes("reverse")) tags.add("reverse");
   if (loop && (n.includes("circuit") || n.includes("raceway"))) tags.add("circuit");
   return [...tags];
+}
+
+/** A free slug for a title: the title's, else with the map's slug, then a number. Adds it to `taken`. */
+export function allocateSlug(title: string, mapSlug: string, taken: Set<string>) {
+  const base = slugify(title) || "route";
+  let slug = taken.has(base) ? `${base}-${mapSlug}` : base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${mapSlug}-${n}`;
+  taken.add(slug);
+  return slug;
 }
 
 /**
@@ -69,17 +83,16 @@ export async function bundledRoutes(
         manualSectors: race.manualSectors,
         branchingEnabled: race.branchingEnabled,
         oneWayGates: race.oneWayGates,
+        freeroam: race.freeroam === true ? true : undefined,
         gates: race.gates,
         startPositions: race.startPositions,
+        pit: race.pit ?? undefined,
         props: Array.isArray(race.props) && race.props.length ? race.props : undefined,
         defaults: race.defaults,
       });
       const { stats: s, geometry } = analyzeRace((await decodeShareCode(code)).payload);
 
-      const base = slugify(race.name) || "route";
-      let slug = taken.has(base) ? `${base}-${map.slug}` : base;
-      for (let n = 2; taken.has(slug); n++) slug = `${base}-${map.slug}-${n}`;
-      taken.add(slug);
+      const slug = allocateSlug(race.name, map.slug, taken);
 
       const at = new Date(newest - out.length * 60_000);
       const builtBy = typeof race.author === "string" && race.author.trim() ? race.author.trim() : null;
@@ -88,7 +101,7 @@ export async function bundledRoutes(
           id: nanoid(10),
           slug,
           title: race.name,
-          description: builtBy ? `Bundled with BeamJoy-Revived. Built by ${builtBy}.` : "Bundled with BeamJoy-Revived.",
+          description: builtBy ? `${BUNDLED_DESCRIPTION_PREFIX} Built by ${builtBy}.` : BUNDLED_DESCRIPTION_PREFIX,
           authorId: BUNDLED_AUTHOR.id,
           activityType: "race",
           shareCode: code,
@@ -118,6 +131,7 @@ export async function bundledRoutes(
           updatedAt: at,
         },
         tags: guessTags(race.name, s.loopable),
+        formerNames: Array.isArray(race.formerNames) ? race.formerNames.filter((n: unknown) => typeof n === "string") : [],
       });
     }
   }

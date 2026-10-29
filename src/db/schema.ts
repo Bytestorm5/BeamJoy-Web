@@ -192,7 +192,8 @@ export const gameLinks = sqliteTable("game_links", {
 
 /**
  * Global leaderboard: each driver's best on a route, as their game reports laps. The best
- * theoretical lap is the sum of their best time in every sector, from any lap.
+ * theoretical lap is the sum of their best time in every sector, from any lap. A route has a
+ * board per start: laps timed from a standstill and flying ones don't compare.
  */
 export const routeRecords = sqliteTable(
   "route_records",
@@ -203,6 +204,8 @@ export const routeRecords = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** `standing` (timed from the grid) or `flying` (timed from a line crossed at speed). */
+    start: text("start", { enum: ["standing", "flying"] }).notNull().default("standing"),
     playerName: text("player_name").notNull().default(""),
     bestLapMs: integer("best_lap_ms").notNull(),
     bestLapVehicle: text("best_lap_vehicle").notNull().default(""),
@@ -214,12 +217,20 @@ export const routeRecords = sqliteTable(
     /** Sum of bestSectors once every sector has a time. */
     theoreticalMs: integer("theoretical_ms"),
     laps: integer("laps").notNull().default(0),
+    /**
+     * The game's run (a race session's phase) that last changed this record, the last lap number
+     * taken from it, and the record as it was before that run (JSON, null: no record before).
+     * A run disqualified afterwards puts the record back.
+     */
+    run: text("run"),
+    runLap: integer("run_lap"),
+    beforeRun: text("before_run"),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.routeId, t.userId] }),
-    index("route_records_lap_idx").on(t.routeId, t.bestLapMs),
-    index("route_records_theory_idx").on(t.routeId, t.theoreticalMs),
+    primaryKey({ columns: [t.routeId, t.userId, t.start] }),
+    index("route_records_lap_idx").on(t.routeId, t.start, t.bestLapMs),
+    index("route_records_theory_idx").on(t.routeId, t.start, t.theoreticalMs),
     index("route_records_user_idx").on(t.userId),
   ],
 );

@@ -1,4 +1,4 @@
-import { requireReadRoutes } from "@/lib/access";
+import { requireReadRoutes, routeControls } from "@/lib/access";
 import { gameViewer } from "@/lib/game/auth";
 import { findCourse, parseGates, parseLevel } from "@/lib/game/course";
 import { deniedResponse, fail, json, preflight, readJson } from "@/lib/game/http";
@@ -27,13 +27,17 @@ export async function POST(req: Request) {
     mapName: typeof body?.mapName === "string" ? body.mapName.slice(0, 80) : undefined,
   });
   if (!route) return json({ route: null });
+  // Whether this game may replace the route's aerial (its author, or a moderator).
+  const canEdit = (await routeControls(viewer, route)).edit;
   return json({
     route: {
       slug: route.slug,
       title: route.title,
       sectors: route.sectors,
       url: new URL(routePath(route.slug), req.url).toString(),
-      mine: !!viewer.user && viewer.user.id === route.authorId,
+      canEdit,
+      /** Older games read this name. */
+      mine: canEdit,
     },
   });
 }

@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { modMapSlug, vanillaMapByLevel } from "@/lib/maps";
-import type { RouteGeometry, Vec3 } from "@/lib/sharecode/analyze";
+import { sameCourse, type RouteGeometry, type Vec3 } from "@/lib/sharecode/analyze";
 
 /**
  * Which listed route a race in the game is. The game sends its gates (it knows nothing about the
@@ -11,9 +11,6 @@ import type { RouteGeometry, Vec3 } from "@/lib/sharecode/analyze";
  * leaderboard.
  */
 
-/** How far a gate may sit from the listed one: share codes round to millimetres, the site to 0.1 m. */
-const GATE_TOLERANCE_M = 3;
-
 export type CourseQuery = { level: string; mapName?: string; gates: Vec3[]; loopable: boolean };
 
 /** The map slugs a level can be listed under. */
@@ -21,17 +18,6 @@ export function mapKeysForLevel(level: string, mapName?: string) {
   const vanilla = vanillaMapByLevel(level);
   if (vanilla) return [vanilla.slug];
   return [...new Set([modMapSlug(level), ...(mapName ? [modMapSlug(mapName)] : [])])];
-}
-
-function sameCourse(a: Vec3[], b: Vec3[]) {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const dx = a[i][0] - b[i][0];
-    const dy = a[i][1] - b[i][1];
-    const dz = a[i][2] - b[i][2];
-    if (dx * dx + dy * dy + dz * dz > GATE_TOLERANCE_M * GATE_TOLERANCE_M) return false;
-  }
-  return true;
 }
 
 /** The oldest listed route with this course, or null. */

@@ -51,6 +51,21 @@ export type RouteAnalysis = { stats: RouteStats; geometry: RouteGeometry };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/** How far a gate may sit from the listed one: share codes round to millimetres, the site to 0.1 m. */
+const GATE_TOLERANCE_M = 3;
+
+/** Same course: as many gates, each within a few metres of its counterpart, in order. */
+export function sameCourse(a: Vec3[], b: Vec3[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const dx = a[i][0] - b[i][0];
+    const dy = a[i][1] - b[i][1];
+    const dz = a[i][2] - b[i][2];
+    if (dx * dx + dy * dy + dz * dz > GATE_TOLERANCE_M * GATE_TOLERANCE_M) return false;
+  }
+  return true;
+}
+
 function dist3(a: Vec3, b: Vec3) {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }

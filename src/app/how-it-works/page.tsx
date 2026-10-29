@@ -102,7 +102,8 @@ export default function HowItWorksPage() {
             </>,
             <>
               Upload a race with every detail from the <B>Upload</B> tab, aerial shot included. Laps you drive on listed
-              routes go to their leaderboards.
+              routes go to their leaderboards, the ones BeamJoy would count: standing and flying starts apart, no pit
+              laps, nothing from a disqualified run.
             </>,
             <>
               Hosts can share where everyone is on <Link href="/live" className="text-accent hover:underline">Live</Link>

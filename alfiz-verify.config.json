@@ -13,6 +13,7 @@
     "requireLinkGame",
     "requireUnlinkGame",
     "requireSubmitTime",
+    "requireWithdrawTime",
     "requireModerateTimes",
     "requireUploadRoads",
     "requireReadLive",

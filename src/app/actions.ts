@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import {
   getViewer,
   isAccessDenied,
+  isRouteAuthor,
   requireCreateRoute,
   requireDeleteRoute,
   requireRateRoute,
@@ -254,7 +255,7 @@ export async function voteRoute(slug: string, value: -1 | 0 | 1): Promise<VoteRe
   } catch (e) {
     if (!isAccessDenied(e)) throw e;
     if (e.reason === "unauthenticated") return refuse("Sign in to rate.");
-    return refuse(viewer.user?.id === route.authorId ? "You can't rate your own route." : "You can't rate routes.");
+    return refuse(isRouteAuthor(viewer, route) ? "You can't rate your own route." : "You can't rate routes.");
   }
   const user = viewer.user!;
   const routeId = route.id;

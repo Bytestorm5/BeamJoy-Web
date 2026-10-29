@@ -4,13 +4,18 @@ import { requireSubmitTime } from "@/lib/access";
 import { gameViewer } from "@/lib/game/auth";
 import { cleanPlayerName } from "@/lib/game/link";
 import { deniedResponse, fail, json, preflight, readJson } from "@/lib/game/http";
+import { defaultStart, parseRun, parseStart } from "@/lib/lap-rules";
 import { checkLap, cleanSectors, recordLap } from "@/lib/leaderboard";
 
 export function OPTIONS() {
   return preflight();
 }
 
-/** One completed lap from the game: `{ route: slug, lapMs, sectors?, vehicle?, playerName? }`. */
+/**
+ * One completed lap from the game:
+ * `{ route: slug, lapMs, sectors?, vehicle?, playerName?, start?, run?, runLap? }`.
+ * `start` is "standing" or "flying"; games from before it sent `kind` ("grid" or "freeroam").
+ */
 export async function POST(req: Request) {
   const viewer = await gameViewer(req);
   const body = (await readJson(req, 10_000)) as Record<string, unknown> | null;
@@ -22,6 +27,7 @@ export async function POST(req: Request) {
       authorId: schema.routes.authorId,
       distanceM: schema.routes.distanceM,
       sectors: schema.routes.sectors,
+      loopable: schema.routes.loopable,
     })
     .from(schema.routes)
     .where(eq(schema.routes.slug, slug))
@@ -41,11 +47,13 @@ export async function POST(req: Request) {
     sectors: cleanSectors(route, lapMs, body?.sectors),
     vehicle: typeof body?.vehicle === "string" ? body.vehicle.slice(0, 64) : "",
     playerName: cleanPlayerName(body?.playerName),
+    start: parseStart(body?.start) ?? (body?.kind === "freeroam" ? "flying" : defaultStart(route.loopable)),
+    run: parseRun(body?.run, body?.runLap),
   };
   const problem = checkLap(route, lap);
   if (problem) return fail(422, problem);
 
   const result = await recordLap(route, user.id, lap);
-  if (result === "too-soon") return fail(429, "Already got that lap.");
+  if (result === "duplicate") return fail(429, "Already got that lap.");
   return json(result);
 }

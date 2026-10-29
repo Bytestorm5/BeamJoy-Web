@@ -253,7 +253,14 @@ export const getMap = cache(async (slug: string): Promise<MapInfo | null> => {
 /** The few columns gates and leaderboards need, by public slug. */
 export async function getRouteRef(slug: string) {
   const [row] = await getDb()
-    .select({ id: routes.id, slug: routes.slug, title: routes.title, authorId: routes.authorId, sectors: routes.sectors })
+    .select({
+      id: routes.id,
+      slug: routes.slug,
+      title: routes.title,
+      authorId: routes.authorId,
+      sectors: routes.sectors,
+      loopable: routes.loopable,
+    })
     .from(routes)
     .where(eq(routes.slug, slug))
     .limit(1);

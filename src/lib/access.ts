@@ -33,6 +33,9 @@ export type RouteRef = { id: string; authorId: string };
 const routeScope = (route: RouteRef) => `bj.route:${route.id}` as const;
 const isAuthor = (viewer: Viewer, route: RouteRef) => !!viewer.user && viewer.user.id === route.authorId;
 
+/** Whether the viewer shared this route: for wording ("you can't rate your own"), never for access. */
+export const isRouteAuthor = isAuthor;
+
 function requireSignedIn(viewer: Viewer, permission: string): asserts viewer is Viewer & { user: NonNullable<Viewer["user"]> } {
   if (!viewer.user) throw new AccessDeniedError({ reason: "unauthenticated", permission });
 }
@@ -87,7 +90,7 @@ export async function requireRecordActivity(viewer: Viewer) {
 
 /** Which controls a route page shows. One snapshot, so every answer comes from the same instant. */
 export async function routeControls(viewer: Viewer, route: RouteRef) {
-  if (!viewer.user) return { edit: false, delete: false, rate: false };
+  if (!viewer.user) return { edit: false, delete: false, rate: false, author: false };
   const scope = routeScope(route);
   const snap = await (await alfizClient()).snapshot(viewer.principal);
   const own = isAuthor(viewer, route);
@@ -97,6 +100,7 @@ export async function routeControls(viewer: Viewer, route: RouteRef) {
     delete:
       snap.can("bj.routes.delete", scope) || snap.can("bj.routes.delete_own", scope, { condition: () => own }),
     rate: snap.can("bj.routes.rate_route", scope, { condition: () => !own }),
+    author: own,
   };
 }
 
@@ -127,6 +131,16 @@ export async function requireUnlinkGame(viewer: Viewer, link: GameLinkRef) {
 
 /** A lap time from the game, onto a route's leaderboard. */
 export async function requireSubmitTime(viewer: Viewer, route: RouteRef) {
+  requireSignedIn(viewer, "bj.routes.submit_time");
+  await (await alfizClient()).require(viewer.principal, "bj.routes.submit_time", routeScope(route));
+  return viewer.user;
+}
+
+/**
+ * The game takes back laps it posted for the viewer (a run disqualified afterwards). Part of
+ * posting times, so the same permission: it only ever touches the viewer's own records.
+ */
+export async function requireWithdrawTime(viewer: Viewer, route: RouteRef) {
   requireSignedIn(viewer, "bj.routes.submit_time");
   await (await alfizClient()).require(viewer.principal, "bj.routes.submit_time", routeScope(route));
   return viewer.user;

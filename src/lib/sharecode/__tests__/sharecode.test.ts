@@ -31,6 +31,20 @@ describe("share codes", () => {
     expect(decoded.payload.name).toBe("Box");
   });
 
+  it("keeps what newer exporters add: a pit lane, pit boxes, flying starts", async () => {
+    const pit = { entry: gate(10, -5), exit: gate(90, -5), fromStep: 4, toStep: 1, speedLimitKmh: 60 };
+    const withPits = {
+      ...rectangle,
+      pit,
+      startPositions: rectangle.startPositions.map((s, i) => ({ ...s, pit: { pos: { x: 20 + i * 8, y: -8, z: 0 } } })),
+      defaults: { laps: 4, flyingStart: true, outLap: true },
+    };
+    const decoded = await decodeShareCode(await encodeRaceShareCode(withPits));
+    expect(decoded.payload.pit).toEqual(pit);
+    expect(decoded.payload.startPositions[1]).toMatchObject({ pit: { pos: { x: 28 } } });
+    expect(decoded.payload.defaults).toMatchObject({ flyingStart: true, outLap: true });
+  });
+
   it("tolerates whitespace and line breaks from chat apps", async () => {
     const code = await encodeRaceShareCode(rectangle);
     const mangled = `  ${code.slice(0, 20)}\n${code.slice(20, 40)} ${code.slice(40)}\n`;
